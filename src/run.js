@@ -5,8 +5,9 @@ const scan = require("./scan");
 const { pluralize, forEachComponent } = require("./utils");
 
 function run({ config, configDir, crawlFrom, startTime }) {
+  const globs = config.globs || ["**/*.js"];
   const files = new fdir()
-    .glob(...config.globs)
+    .glob(...globs)
     .exclude(config.exclude)
     .withFullPaths()
     .crawl(crawlFrom)

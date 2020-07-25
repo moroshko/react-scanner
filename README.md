@@ -180,7 +180,9 @@ module.exports = {
     forEachComponent(({ componentName, component }) => {
       const { instances } = component;
 
-      output[componentName] = instances ? instances.length : 0;
+      if (instances) {
+        output[componentName] = instances.length;
+      }
     });
 
     // sort by instances count
