@@ -2,11 +2,17 @@ const fs = require("fs");
 const path = require("path");
 const { suite } = require("uvu");
 const assert = require("uvu/assert");
-const { validateConfig, pluralize, forEachComponent } = require("./utils");
+const {
+  validateConfig,
+  pluralize,
+  forEachComponent,
+  sortObjectKeysByValue,
+} = require("./utils");
 
 const ValidateConfig = suite("validateConfig");
 const Pluralize = suite("pluralize");
 const ForEachComponent = suite("forEachComponent");
+const SortObjectKeysByValue = suite("sortObjectKeysByValue");
 
 ValidateConfig("crawlFrom is missing", () => {
   const originalPathResolve = path.resolve;
@@ -165,6 +171,58 @@ ForEachComponent("visits every component", () => {
   ]);
 });
 
+SortObjectKeysByValue("default valueMap", () => {
+  const result = sortObjectKeysByValue({
+    Header: 5,
+    Link: 10,
+    Accordion: 7,
+    Footer: 16,
+  });
+
+  assert.equal(result, {
+    Footer: 16,
+    Link: 10,
+    Accordion: 7,
+    Header: 5,
+  });
+});
+
+SortObjectKeysByValue("custom valueMap", () => {
+  const result = sortObjectKeysByValue(
+    {
+      Header: {
+        instances: 16,
+      },
+      Link: {
+        instances: 10,
+      },
+      Accordion: {
+        instances: 7,
+      },
+      Footer: {
+        instances: 16,
+      },
+    },
+    (component) => component.instances
+  );
+
+  assert.equal(result, {
+    Footer: {
+      instances: 16,
+    },
+    Link: {
+      instances: 10,
+    },
+    Accordion: {
+      instances: 7,
+    },
+    Header: {
+      instances: 16,
+    },
+  });
+});
+
 ValidateConfig.run();
 Pluralize.run();
 ForEachComponent.run();
+SortObjectKeysByValue.run();

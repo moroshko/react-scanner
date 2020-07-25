@@ -144,9 +144,9 @@ module.exports = {
     return ["utils", "tests"].includes(dir);
   },
 
-  // [optional] defaults to: ["**/*.js"]
+  // [optional] defaults to: ["**/!(*.test|*.spec).@(js|ts)?(x)"]
   // Only files matching these globs will be scanned (see here for glob syntax: https://github.com/micromatch/picomatch#globbing-features).
-  globs: ["**/*.js", "**/*.jsx"],
+  globs: ["**/*.js"],
 
   // [optional]
   // Components to report on (omit to report on all components).
@@ -171,10 +171,11 @@ module.exports = {
   // The processReport function gets an object with the following in it:
   // * report - the full JSON report
   // * forEachComponent - recursively visits every component in the report
+  // * sortObjectKeysByValue - sorts object keys by some function of the value (this function is identity by default)
   // * writeFile - use it to store the result object in a file
   // When processReport is not specified, the report is logged out.
-  processReport: ({ forEachComponent, writeFile }) => {
-    const output = {};
+  processReport: ({ forEachComponent, sortObjectKeysByValue, writeFile }) => {
+    let output = {};
 
     // count instances
     forEachComponent(({ componentName, component }) => {
@@ -185,18 +186,11 @@ module.exports = {
       }
     });
 
-    // sort by instances count
-    const entries = Object.entries(output);
-
-    entries.sort(([name1, count1], [name2, count2]) =>
-      count1 > count2 || (count1 === count2 && name1 <= name2) ? -1 : 1
-    );
-
-    const result = Object.fromEntries(entries);
+    output = sortObjectKeysByValue(output);
 
     writeFile(
       "./reports/oscar.json", // absolute or relative to the config file location
-      result // must be an object, will be JSON.stringified
+      output // must be an object, will be JSON.stringified
     );
   },
 };

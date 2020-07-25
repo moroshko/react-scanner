@@ -1,11 +1,9 @@
-const { parse } = require("meriyah");
+const { parse } = require("@typescript-eslint/typescript-estree");
 const astray = require("astray");
 const getObjectPath = require("dlv");
 const setObjectPath = require("dset");
 
 const parseOptions = {
-  module: true,
-  next: true,
   loc: true,
   jsx: true,
 };

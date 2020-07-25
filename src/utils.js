@@ -50,8 +50,25 @@ const forEachComponent = (report) => (callback) => {
   }
 };
 
+function sortObjectKeysByValue(obj, mapValue = (value) => value) {
+  const entries = Object.entries(obj);
+
+  entries.sort(([key1, value1], [key2, value2]) => {
+    const value1ToCompare = mapValue(value1);
+    const value2ToCompare = mapValue(value2);
+
+    return value1ToCompare > value2ToCompare ||
+      (value1ToCompare === value2ToCompare && key1 <= key2)
+      ? -1
+      : 1;
+  });
+
+  return Object.fromEntries(entries);
+}
+
 module.exports = {
   validateConfig,
   pluralize,
   forEachComponent,
+  sortObjectKeysByValue,
 };

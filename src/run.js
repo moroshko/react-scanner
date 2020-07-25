@@ -2,10 +2,16 @@ const fs = require("fs");
 const path = require("path");
 const fdir = require("fdir");
 const scan = require("./scan");
-const { pluralize, forEachComponent } = require("./utils");
+const {
+  pluralize,
+  forEachComponent,
+  sortObjectKeysByValue,
+} = require("./utils");
+
+const DEFAULT_GLOBS = ["**/!(*.test|*.spec).@(js|ts)?(x)"];
 
 function run({ config, configDir, crawlFrom, startTime }) {
-  const globs = config.globs || ["**/*.js"];
+  const globs = config.globs || DEFAULT_GLOBS;
   const files = new fdir()
     .glob(...globs)
     .exclude(config.exclude)
@@ -29,19 +35,11 @@ function run({ config, configDir, crawlFrom, startTime }) {
     });
   }
 
-  const endTime = process.hrtime.bigint();
-
-  // eslint-disable-next-line no-console
-  console.log(
-    `Scanned ${pluralize(files.length, "file")} in ${
-      Number(endTime - startTime) / 1e9
-    } seconds`
-  );
-
   if (typeof config.processReport === "function") {
     config.processReport({
       report,
       forEachComponent: forEachComponent(report),
+      sortObjectKeysByValue,
       writeFile: (outputPath, object) => {
         const data = JSON.stringify(object, null, 2);
         const filePath = path.resolve(configDir, outputPath);
@@ -57,6 +55,15 @@ function run({ config, configDir, crawlFrom, startTime }) {
     // eslint-disable-next-line no-console
     console.log(JSON.stringify(report, null, 2));
   }
+
+  const endTime = process.hrtime.bigint();
+
+  // eslint-disable-next-line no-console
+  console.log(
+    `Scanned ${pluralize(files.length, "file")} in ${
+      Number(endTime - startTime) / 1e9
+    } seconds`
+  );
 }
 
 module.exports = run;
