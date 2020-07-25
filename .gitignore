@@ -1,0 +1,4 @@
+node_modules
+coverage
+scanner-reports
+.DS_Store

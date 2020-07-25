@@ -1,0 +1,16 @@
+{
+  "extends": ["eslint:recommended", "plugin:import/errors"],
+  "plugins": ["import"],
+  "rules": {
+    "no-console": ["error", { "allow": ["error"] }],
+    "no-unused-vars": [
+      "error",
+      { "argsIgnorePattern": "^_", "ignoreRestSiblings": true }
+    ],
+    "import/no-cycle": "error"
+  },
+  "env": {
+    "es2020": true,
+    "node": true
+  }
+}

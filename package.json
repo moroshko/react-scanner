@@ -1,0 +1,59 @@
+{
+  "name": "react-scanner",
+  "version": "0.1.0",
+  "description": "Extract React components and props usage from code.",
+  "bin": "src/index.js",
+  "scripts": {
+    "lint": "eslint --max-warnings 0 \"**/*.js\"",
+    "prettier": "prettier --write \"**/*.{js,json,md}\"",
+    "test": "uvu src test",
+    "test:watch": "watchlist src -- npm t",
+    "test:coverage": "c8 --include=src/**/*.js -o coverage --check-coverage --branches 100 --functions 100 --lines 100 --statements 100 npm t"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run prettier && npm run lint && npm run test:coverage"
+    }
+  },
+  "dependencies": {
+    "astray": "1.0.0",
+    "dlv": "1.1.3",
+    "dset": "2.0.1",
+    "fdir": "3.4.3",
+    "meriyah": "2.1.1",
+    "picomatch": "2.2.2",
+    "sade": "1.7.3"
+  },
+  "devDependencies": {
+    "c8": "7.2.1",
+    "eslint": "7.5.0",
+    "eslint-plugin-import": "2.22.0",
+    "husky": "4.2.5",
+    "prettier": "2.0.5",
+    "uvu": "0.3.0",
+    "watchlist": "0.2.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/moroshko/react-scanner"
+  },
+  "engines": {
+    "node": ">=10.12.0"
+  },
+  "keywords": [
+    "react",
+    "scanner",
+    "component",
+    "components",
+    "jsx",
+    "usage",
+    "info",
+    "stats",
+    "statistics"
+  ],
+  "author": {
+    "name": "Misha Moroshko",
+    "email": "michael.moroshko@gmail.com"
+  },
+  "license": "MIT"
+}
