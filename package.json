@@ -2,7 +2,7 @@
   "name": "react-scanner",
   "version": "0.1.2",
   "description": "Extract React components and props usage from code.",
-  "bin": "src/index.js",
+  "bin": "bin/react-scanner",
   "scripts": {
     "lint": "eslint --max-warnings 0 \"**/*.js\"",
     "prettier": "prettier --write \"**/*.{js,json,md}\"",
@@ -38,6 +38,7 @@
     "url": "https://github.com/moroshko/react-scanner"
   },
   "files": [
+    "bin",
     "src/**/!(*.test).js"
   ],
   "engines": {
