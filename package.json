@@ -37,6 +37,12 @@
     "type": "git",
     "url": "https://github.com/moroshko/react-scanner"
   },
+  "files": [
+    "src/index.js",
+    "src/run.js",
+    "src/scan.js",
+    "src/utils.js"
+  ],
   "engines": {
     "node": ">=10.12.0"
   },
