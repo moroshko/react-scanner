@@ -81,6 +81,7 @@ function scan({
   filePath,
   components,
   includeSubComponents = false,
+  importedFrom,
   report,
 }) {
   let ast;
@@ -92,40 +93,89 @@ function scan({
     return;
   }
 
-  astray.walk(
-    ast,
-    {
-      JSXOpeningElement(node, report) {
-        const name = getComponentName(node.name);
-        const nameParts = name.split(".");
-        const shouldScanComponent =
-          !components ||
-          (components[nameParts[0]] &&
-            (nameParts.length === 1 || includeSubComponents));
+  const importsMap = {};
 
-        if (!shouldScanComponent) {
-          return astray.SKIP;
+  astray.walk(ast, {
+    ImportDeclaration(node) {
+      const { source, specifiers } = node;
+      const moduleName = source.value;
+      const specifiersCount = specifiers.length;
+
+      for (let i = 0; i < specifiersCount; i++) {
+        switch (specifiers[i].type) {
+          case "ImportDefaultSpecifier":
+          case "ImportSpecifier":
+          case "ImportNamespaceSpecifier": {
+            const imported = specifiers[i].local.name;
+
+            importsMap[imported] = moduleName;
+            break;
+          }
+
+          /* c8 ignore next 5 */
+          default: {
+            throw new Error(
+              `Unknown import specifier type: ${specifiers[i].type}`
+            );
+          }
         }
-
-        const componentPath = nameParts.join(".components.");
-        let componentInfo = getObjectPath(report, componentPath);
-
-        if (!componentInfo) {
-          componentInfo = {};
-          setObjectPath(report, componentPath, componentInfo);
-        }
-
-        if (!componentInfo.instances) {
-          componentInfo.instances = [];
-        }
-
-        const info = getInstanceInfo(node, filePath);
-
-        componentInfo.instances.push(info);
-      },
+      }
     },
-    report
-  );
+    JSXOpeningElement(node) {
+      const name = getComponentName(node.name);
+      const nameParts = name.split(".");
+      const shouldReportComponent = () => {
+        if (components) {
+          if (
+            components[name] === undefined &&
+            components[nameParts[0]] === undefined
+          ) {
+            return false;
+          }
+        }
+
+        if (includeSubComponents === false) {
+          if (nameParts.length > 1) {
+            return false;
+          }
+        }
+
+        if (importedFrom) {
+          const actualImportedFrom = importsMap[nameParts[0]];
+
+          if (importedFrom instanceof RegExp) {
+            if (importedFrom.test(actualImportedFrom) === false) {
+              return false;
+            }
+          } else if (actualImportedFrom !== importedFrom) {
+            return false;
+          }
+        }
+
+        return true;
+      };
+
+      if (!shouldReportComponent()) {
+        return astray.SKIP;
+      }
+
+      const componentPath = nameParts.join(".components.");
+      let componentInfo = getObjectPath(report, componentPath);
+
+      if (!componentInfo) {
+        componentInfo = {};
+        setObjectPath(report, componentPath, componentInfo);
+      }
+
+      if (!componentInfo.instances) {
+        componentInfo.instances = [];
+      }
+
+      const info = getInstanceInfo(node, filePath);
+
+      componentInfo.instances.push(info);
+    },
+  });
 }
 
 module.exports = scan;

@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const isPlainObject = require("is-plain-object");
 
 function validateConfig(config, configDir) {
   const result = {
@@ -17,6 +18,64 @@ function validateConfig(config, configDir) {
       result.crawlFrom = crawlFrom;
     } else {
       result.errors.push(`crawlFrom path doesn't exist (${crawlFrom})`);
+    }
+  }
+
+  if (config.exclude !== undefined) {
+    if (typeof config.exclude !== "function") {
+      result.errors.push(`exclude should be a function`);
+    }
+  }
+
+  if (config.globs !== undefined) {
+    if (Array.isArray(config.globs)) {
+      for (let i = 0, len = config.globs.length; i < len; i++) {
+        if (typeof config.globs[i] !== "string") {
+          result.errors.push(
+            `every item in the globs array should be a string (${typeof config
+              .globs[i]} found)`
+          );
+          break;
+        }
+      }
+    } else {
+      result.errors.push(`globs should be an array`);
+    }
+  }
+
+  if (config.components !== undefined) {
+    if (isPlainObject(config.components)) {
+      for (const componentName in config.components) {
+        if (config.components[componentName] !== true) {
+          result.errors.push(
+            `the only supported value in the components object is true`
+          );
+          break;
+        }
+      }
+    } else {
+      result.errors.push(`components should be an object`);
+    }
+  }
+
+  if (config.includeSubComponents !== undefined) {
+    if (typeof config.includeSubComponents !== "boolean") {
+      result.errors.push(`includeSubComponents should be a boolean`);
+    }
+  }
+
+  if (config.importedFrom !== undefined) {
+    if (
+      typeof config.importedFrom !== "string" &&
+      config.importedFrom instanceof RegExp === false
+    ) {
+      result.errors.push(`importedFrom should be a string or a RegExp`);
+    }
+  }
+
+  if (config.processReport !== undefined) {
+    if (typeof config.processReport !== "function") {
+      result.errors.push(`processReport should be a function`);
     }
   }
 

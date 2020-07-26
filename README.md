@@ -2,7 +2,7 @@
 
 # react-scanner
 
-`react-scanner` statically analyzes the given code and extracts React components and props usage.
+`react-scanner` statically analyzes the given code (TypeScript supported) and extracts React components and props usage.
 
 First, it crawls the given directory and compiles a list of files to be scanned. Then, it scans every file by extracting rendered components and their props into a JSON report.
 
@@ -134,37 +134,52 @@ The config file can be located anywhere and it must export an object like this:
 ```js
 module.exports = {
   // [required]
+  // Type: string
   // The path of the directory to start crawling from (absolute or relative to the config file location).
   crawlFrom: "./src",
 
   // [optional]
+  // Type: function
   // Directory names to exclude from crawling.
   exclude: (dir) => {
     // Note: dir is just the directory name, not the path.
     return ["utils", "tests"].includes(dir);
   },
 
-  // [optional] defaults to: ["**/!(*.test|*.spec).@(js|ts)?(x)"]
+  // [optional]
+  // Type: array of strings (globs)
+  // Default: ["**/!(*.test|*.spec).@(js|ts)?(x)"]
   // Only files matching these globs will be scanned (see here for glob syntax: https://github.com/micromatch/picomatch#globbing-features).
   globs: ["**/*.js"],
 
   // [optional]
-  // Components to report on (omit to report on all components).
+  // Type: object where all values are true
+  // Components to report (omit to report all components).
   components: {
     Button: true,
     Footer: true,
     Text: true,
   },
 
-  // [optional] defaults to: false
-  // Whether to report on subcomponents or not.
-  // false - Footer will be reported on, but Footer.Content will not.
-  // true - Footer.Content will be reported on, as well as Footer.Content.Legal, etc.
+  // [optional]
+  // Type: boolean
+  // Default: false
+  // Whether to report subcomponents or not.
+  // false - Footer will be reported, but Footer.Content will not.
+  // true - Footer.Content will be reported, as well as Footer.Content.Legal, etc.
   includeSubComponents: true,
 
   // [optional]
+  // Type: string or RegExp.
+  // Before reporting a component, we'll check if it's imported from a module name matching importedFrom.
+  // Only if there is a match, the component will be reported.
+  // When omitted, this check is bypassed.
+  importedFrom: "basis",
+
+  // [optional]
+  // Type: function
   // Specify what to do with the report.
-  // In this example, we count how many times each component is used, sort
+  // In this example, we count how many times each component and its props is used, sort
   // by count, and write the result to a file.
   // Note, the components in the report will be nested when includeSubComponents is true.
   // To help traversing the report, we provide a convenience forEachComponent function.
@@ -181,12 +196,31 @@ module.exports = {
     forEachComponent(({ componentName, component }) => {
       const { instances } = component;
 
-      if (instances) {
-        output[componentName] = instances.length;
+      if (!instances) {
+        return;
       }
+
+      output[componentName] = {
+        instances: instances.length,
+        props: {},
+      };
+
+      instances.forEach((instance) => {
+        for (const prop in instance.props) {
+          if (output[componentName].props[prop] === undefined) {
+            output[componentName].props[prop] = 0;
+          }
+
+          output[componentName].props[prop] += 1;
+        }
+      });
+
+      output[componentName].props = sortObjectKeysByValue(
+        output[componentName].props
+      );
     });
 
-    output = sortObjectKeysByValue(output);
+    output = sortObjectKeysByValue(output, (component) => component.instances);
 
     writeFile(
       "./reports/oscar.json", // absolute or relative to the config file location
@@ -194,6 +228,33 @@ module.exports = {
     );
   },
 };
+```
+
+This `processReport` would produce something like this:
+
+```json
+{
+  "Text": {
+    "instances": 17,
+    "props": {
+      "margin": 6,
+      "color": 4,
+      "textStyle": 1
+    }
+  },
+  "Button": {
+    "instances": 10,
+    "props": {
+      "width": 10,
+      "variant": 5,
+      "type": 3
+    }
+  },
+  "Footer": {
+    "instances": 1,
+    "props": {}
+  }
+}
 ```
 
 ## License

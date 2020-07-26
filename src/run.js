@@ -20,7 +20,7 @@ function run({ config, configDir, crawlFrom, startTime }) {
     .sync();
 
   let report = {};
-  const { components, includeSubComponents } = config;
+  const { components, includeSubComponents, importedFrom } = config;
 
   for (let i = 0, len = files.length; i < len; i++) {
     const filePath = files[i];
@@ -31,9 +31,21 @@ function run({ config, configDir, crawlFrom, startTime }) {
       filePath,
       components,
       includeSubComponents,
+      importedFrom,
       report,
     });
   }
+
+  const logSummary = () => {
+    const endTime = process.hrtime.bigint();
+
+    // eslint-disable-next-line no-console
+    console.log(
+      `Scanned ${pluralize(files.length, "file")} in ${
+        Number(endTime - startTime) / 1e9
+      } seconds`
+    );
+  };
 
   if (typeof config.processReport === "function") {
     config.processReport({
@@ -47,23 +59,18 @@ function run({ config, configDir, crawlFrom, startTime }) {
         fs.mkdirSync(path.dirname(filePath), { recursive: true });
         fs.writeFileSync(filePath, data);
 
+        logSummary();
+
         // eslint-disable-next-line no-console
         console.log(`See: ${filePath}`);
       },
     });
   } else {
+    logSummary();
+
     // eslint-disable-next-line no-console
     console.log(JSON.stringify(report, null, 2));
   }
-
-  const endTime = process.hrtime.bigint();
-
-  // eslint-disable-next-line no-console
-  console.log(
-    `Scanned ${pluralize(files.length, "file")} in ${
-      Number(endTime - startTime) / 1e9
-    } seconds`
-  );
 }
 
 module.exports = run;

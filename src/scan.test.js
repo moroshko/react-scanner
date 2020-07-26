@@ -5,7 +5,11 @@ const scan = require("./scan");
 const Scan = suite("scan");
 
 Scan.before((context) => {
-  context.getReport = (filePath, code, { includeSubComponents } = {}) => {
+  context.getReport = (
+    filePath,
+    code,
+    { components, includeSubComponents, importedFrom } = {}
+  ) => {
     const report = {};
 
     scan({
@@ -16,7 +20,9 @@ Scan.before((context) => {
         Header: true,
         Text: true,
       },
-      ...(includeSubComponents != null && { includeSubComponents }),
+      ...(components !== undefined && { components }),
+      ...(includeSubComponents !== undefined && { includeSubComponents }),
+      ...(importedFrom !== undefined && { importedFrom }),
       report,
     });
 
@@ -251,11 +257,18 @@ Scan("with sub components", ({ getReport }) => {
   const report = getReport(
     "with-sub-components.js",
     `
-    <Header>
-      <Header.Logo />
-    </Header>
+    <>
+      <Header>
+        <Header.Logo />
+      </Header>
+      <Footer.Legal />
+    </>
   `,
     {
+      components: {
+        Header: true,
+        "Footer.Legal": true,
+      },
       includeSubComponents: true,
     }
   );
@@ -269,8 +282,8 @@ Scan("with sub components", ({ getReport }) => {
           location: {
             file: "with-sub-components.js",
             start: {
-              line: 2,
-              column: 5,
+              line: 3,
+              column: 7,
             },
           },
         },
@@ -284,7 +297,26 @@ Scan("with sub components", ({ getReport }) => {
               location: {
                 file: "with-sub-components.js",
                 start: {
-                  line: 3,
+                  line: 4,
+                  column: 9,
+                },
+              },
+            },
+          ],
+        },
+      },
+    },
+    Footer: {
+      components: {
+        Legal: {
+          instances: [
+            {
+              props: {},
+              propsSpread: false,
+              location: {
+                file: "with-sub-components.js",
+                start: {
+                  line: 6,
                   column: 7,
                 },
               },
@@ -565,6 +597,153 @@ Scan("typescript", ({ getReport }) => {
           },
         },
       ],
+    },
+  });
+});
+
+Scan("not importedFrom", ({ getReport }) => {
+  const report = getReport(
+    "not-imported-from.js",
+    `
+    import Header from "other-design-system";
+    
+    <Header />
+  `,
+    { importedFrom: "my-design-system" }
+  );
+
+  assert.equal(report, {});
+});
+
+Scan("importedFrom default export", ({ getReport }) => {
+  const report = getReport(
+    "imported-from-default-export.js",
+    `
+    import Header from "my-design-system";
+    import Box from "other-module";
+    
+    <Box>
+      <Header />
+    </Box>
+  `,
+    { importedFrom: /my-design-system/ }
+  );
+
+  assert.equal(report, {
+    Header: {
+      instances: [
+        {
+          props: {},
+          propsSpread: false,
+          location: {
+            file: "imported-from-default-export.js",
+            start: {
+              line: 6,
+              column: 7,
+            },
+          },
+        },
+      ],
+    },
+  });
+});
+
+Scan("importedFrom named export", ({ getReport }) => {
+  const report = getReport(
+    "imported-from-named-export.js",
+    `
+    import { Header } from "basis";
+    
+    <Header />
+  `,
+    { importedFrom: "basis" }
+  );
+
+  assert.equal(report, {
+    Header: {
+      instances: [
+        {
+          props: {},
+          propsSpread: false,
+          location: {
+            file: "imported-from-named-export.js",
+            start: {
+              line: 4,
+              column: 5,
+            },
+          },
+        },
+      ],
+    },
+  });
+});
+
+Scan("importedFrom named export with alias", ({ getReport }) => {
+  const report = getReport(
+    "imported-from-named-export-with-alias.js",
+    `
+    import { CoreHeader as Header } from "basis";
+    
+    <Header />
+  `,
+    { importedFrom: "basis" }
+  );
+
+  assert.equal(report, {
+    Header: {
+      instances: [
+        {
+          props: {},
+          propsSpread: false,
+          location: {
+            file: "imported-from-named-export-with-alias.js",
+            start: {
+              line: 4,
+              column: 5,
+            },
+          },
+        },
+      ],
+    },
+  });
+});
+
+Scan("importedFrom entire module", ({ getReport }) => {
+  const report = getReport(
+    "imported-from-entire-module.js",
+    `
+    import * as Basis from "basis";
+    
+    <Basis.Header />
+  `,
+    {
+      components: {
+        "Basis.Header": true,
+      },
+      includeSubComponents: true,
+      importedFrom: "basis",
+    }
+  );
+
+  assert.equal(report, {
+    Basis: {
+      components: {
+        Header: {
+          instances: [
+            {
+              props: {},
+              propsSpread: false,
+              location: {
+                file: "imported-from-entire-module.js",
+                start: {
+                  line: 4,
+                  column: 5,
+                },
+              },
+            },
+          ],
+        },
+      },
     },
   });
 });

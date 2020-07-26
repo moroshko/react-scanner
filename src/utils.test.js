@@ -14,29 +14,42 @@ const Pluralize = suite("pluralize");
 const ForEachComponent = suite("forEachComponent");
 const SortObjectKeysByValue = suite("sortObjectKeysByValue");
 
-ValidateConfig("crawlFrom is missing", () => {
-  const originalPathResolve = path.resolve;
-  const originFsExistsSync = fs.existsSync;
+ValidateConfig.before.each((context) => {
+  context.originalPathResolve = path.resolve;
+  context.originFsExistsSync = fs.existsSync;
 
-  path.resolve = () => "";
-  fs.existsSync = () => false;
+  path.resolve = () => "/Users/misha/oscar/src";
+  fs.existsSync = () => true;
+
+  context.mock = (fn) => {
+    fn();
+  };
+});
+
+ValidateConfig.after.each((context) => {
+  context.mock = undefined;
+  path.resolve = context.originalPathResolve;
+  fs.existsSync = context.originFsExistsSync;
+});
+
+ValidateConfig("crawlFrom is missing", (context) => {
+  context.mock(() => {
+    path.resolve = () => "";
+    fs.existsSync = () => false;
+  });
 
   const result = validateConfig({}, "/Users/misha/oscar");
 
   assert.equal(result, {
     errors: [`crawlFrom is missing`],
   });
-
-  path.resolve = originalPathResolve;
-  fs.existsSync = originFsExistsSync;
 });
 
-ValidateConfig("crawlFrom should be a string", () => {
-  const originalPathResolve = path.resolve;
-  const originFsExistsSync = fs.existsSync;
-
-  path.resolve = () => "";
-  fs.existsSync = () => false;
+ValidateConfig("crawlFrom should be a string", (context) => {
+  context.mock(() => {
+    path.resolve = () => "";
+    fs.existsSync = () => false;
+  });
 
   const result = validateConfig(
     {
@@ -48,17 +61,12 @@ ValidateConfig("crawlFrom should be a string", () => {
   assert.equal(result, {
     errors: [`crawlFrom should be a string`],
   });
-
-  path.resolve = originalPathResolve;
-  fs.existsSync = originFsExistsSync;
 });
 
-ValidateConfig("crawlFrom path doesn't exist", () => {
-  const originalPathResolve = path.resolve;
-  const originFsExistsSync = fs.existsSync;
-
-  path.resolve = () => "/Users/misha/oscar/src";
-  fs.existsSync = () => false;
+ValidateConfig("crawlFrom path doesn't exist", (context) => {
+  context.mock(() => {
+    fs.existsSync = () => false;
+  });
 
   const result = validateConfig(
     {
@@ -70,21 +78,144 @@ ValidateConfig("crawlFrom path doesn't exist", () => {
   assert.equal(result, {
     errors: [`crawlFrom path doesn't exist (/Users/misha/oscar/src)`],
   });
-
-  path.resolve = originalPathResolve;
-  fs.existsSync = originFsExistsSync;
 });
 
-ValidateConfig("crawlFrom path exists", () => {
-  const originalPathResolve = path.resolve;
-  const originFsExistsSync = fs.existsSync;
-
-  path.resolve = () => "/Users/misha/oscar/src";
-  fs.existsSync = () => true;
-
+ValidateConfig("exclude is not a function", () => {
   const result = validateConfig(
     {
       crawlFrom: "./src",
+      exclude: "utils",
+    },
+    "/Users/misha/oscar"
+  );
+
+  assert.equal(result, {
+    crawlFrom: "/Users/misha/oscar/src",
+    errors: [`exclude should be a function`],
+  });
+});
+
+ValidateConfig("globs is not an array", () => {
+  const result = validateConfig(
+    {
+      crawlFrom: "./src",
+      globs: "**/*.js",
+    },
+    "/Users/misha/oscar"
+  );
+
+  assert.equal(result, {
+    crawlFrom: "/Users/misha/oscar/src",
+    errors: [`globs should be an array`],
+  });
+});
+
+ValidateConfig("globs has a non string item", () => {
+  const result = validateConfig(
+    {
+      crawlFrom: "./src",
+      globs: ["**/*.js", 4],
+    },
+    "/Users/misha/oscar"
+  );
+
+  assert.equal(result, {
+    crawlFrom: "/Users/misha/oscar/src",
+    errors: [`every item in the globs array should be a string (number found)`],
+  });
+});
+
+ValidateConfig("components is not an object", () => {
+  const result = validateConfig(
+    {
+      crawlFrom: "./src",
+      components: "Header",
+    },
+    "/Users/misha/oscar"
+  );
+
+  assert.equal(result, {
+    crawlFrom: "/Users/misha/oscar/src",
+    errors: [`components should be an object`],
+  });
+});
+
+ValidateConfig("components has a non true value", () => {
+  const result = validateConfig(
+    {
+      crawlFrom: "./src",
+      components: {
+        Header: false,
+      },
+    },
+    "/Users/misha/oscar"
+  );
+
+  assert.equal(result, {
+    crawlFrom: "/Users/misha/oscar/src",
+    errors: [`the only supported value in the components object is true`],
+  });
+});
+
+ValidateConfig("includeSubComponents is not a boolean", () => {
+  const result = validateConfig(
+    {
+      crawlFrom: "./src",
+      includeSubComponents: "yes",
+    },
+    "/Users/misha/oscar"
+  );
+
+  assert.equal(result, {
+    crawlFrom: "/Users/misha/oscar/src",
+    errors: [`includeSubComponents should be a boolean`],
+  });
+});
+
+ValidateConfig("importedFrom is not a string or a RegExp", () => {
+  const result = validateConfig(
+    {
+      crawlFrom: "./src",
+      importedFrom: ["basis"],
+    },
+    "/Users/misha/oscar"
+  );
+
+  assert.equal(result, {
+    crawlFrom: "/Users/misha/oscar/src",
+    errors: [`importedFrom should be a string or a RegExp`],
+  });
+});
+
+ValidateConfig("processReport is not a function", () => {
+  const result = validateConfig(
+    {
+      crawlFrom: "./src",
+      processReport: true,
+    },
+    "/Users/misha/oscar"
+  );
+
+  assert.equal(result, {
+    crawlFrom: "/Users/misha/oscar/src",
+    errors: [`processReport should be a function`],
+  });
+});
+
+ValidateConfig("valid config with all options", () => {
+  const result = validateConfig(
+    {
+      crawlFrom: "./src",
+      exclude: (dir) => dir === "utils",
+      globs: ["**/*.js"],
+      components: {
+        Button: true,
+        Footer: true,
+        Text: true,
+      },
+      includeSubComponents: true,
+      importedFrom: "basis",
+      processReport: () => {},
     },
     "/Users/misha/oscar"
   );
@@ -93,9 +224,6 @@ ValidateConfig("crawlFrom path exists", () => {
     crawlFrom: "/Users/misha/oscar/src",
     errors: [],
   });
-
-  path.resolve = originalPathResolve;
-  fs.existsSync = originFsExistsSync;
 });
 
 Pluralize("count = 1", () => {
