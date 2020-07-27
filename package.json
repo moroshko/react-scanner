@@ -30,6 +30,7 @@
     "c8": "7.2.1",
     "eslint": "7.5.0",
     "eslint-plugin-import": "2.22.0",
+    "execa": "4.0.3",
     "husky": "4.2.5",
     "prettier": "2.0.5",
     "uvu": "0.3.0",

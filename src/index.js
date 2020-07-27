@@ -30,6 +30,8 @@ sade("react-scanner", true)
       errors.forEach((error) => {
         console.error(`- ${error}`);
       });
+
+      process.exit(1);
     }
   })
   .parse(process.argv);
