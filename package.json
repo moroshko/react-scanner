@@ -44,7 +44,7 @@
   },
   "files": [
     "bin",
-    "src/**/!(*.test).js"
+    "src/**/!(*.test).@(js|json)"
   ],
   "engines": {
     "node": ">=10.12.0"

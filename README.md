@@ -113,8 +113,8 @@ Running `react-scanner` on it will create the following JSON report:
 
 This raw JSON report is used then to generate something that is useful to you. For example, you might want to know:
 
-- How often a cetrain component is used in your design system? (see `count-components` processor)
-- How often a certain prop in a given component is used? (see `count-component-and-props` processor)
+- How often a cetrain component is used in your design system? (see [`count-components`](#count-components) processor)
+- How often a certain prop in a given component is used? (see [`count-component-and-props`](#count-components-and-props) processor)
 - Looking at some prop in a given component, what's the distribution of values used? (e.g. you might consider deprecating a certain value)
 
 Once you have the result you are interested in, you can write it to a file or simply log it to the console.
@@ -178,7 +178,7 @@ Here are all the available config options:
 | ---------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `crawlFrom`            | string          | The path of the directory to start crawling from.<br>Absolute or relative to the config file location.                                                                                                                            |
 | `exclude`              | function        | Accepts a directory name (not the path!) and should return `true` if the directory should be excluded from crawling.                                                                                                              |
-| `globs`                | array           | Only files matching these globs will be scanned. See [here](https://github.com/micromatch/picomatch#globbing-features) for glob syntax.<br>Default: `["**/!(*.test|*.spec).@(js|ts)?(x)"]`                                        |
+| `globs`                | array           | Only files matching these globs will be scanned. See [here](https://github.com/micromatch/picomatch#globbing-features) for glob syntax.<br>Default: `["**/!(*.test\|*.spec).@(js\|ts)?(x)"]`                                      |
 | `components`           | object          | Components to report. Omit to report all components.                                                                                                                                                                              |
 | `includeSubComponents` | boolean         | Whether to report subcomponents or not.<br>When `false`, `Footer` will be reported, but `Footer.Content` will not.<br>When `true`, `Footer.Content` will be reported, as well as `Footer.Content.Legal`, etc.<br>Default: `false` |
 | `importedFrom`         | string or regex | Before reporting a component, we'll check if it's imported from a module name matching `importedFrom` and, only if there is a match, the component will be reported.<br>When omitted, this check is bypassed.                     |
