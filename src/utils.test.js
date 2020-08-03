@@ -187,18 +187,114 @@ ValidateConfig("importedFrom is not a string or a RegExp", () => {
   });
 });
 
-ValidateConfig("processReport is not a function", () => {
+ValidateConfig("processors is not an array", () => {
   const result = validateConfig(
     {
       crawlFrom: "./src",
-      processReport: true,
+      processors: "count-components",
     },
     "/Users/misha/oscar"
   );
 
   assert.equal(result, {
     crawlFrom: "/Users/misha/oscar/src",
-    errors: [`processReport should be a function`],
+    errors: [`processors should be an array`],
+  });
+});
+
+ValidateConfig("string form - unknown processor", () => {
+  const result = validateConfig(
+    {
+      crawlFrom: "./src",
+      processors: ["foo"],
+    },
+    "/Users/misha/oscar"
+  );
+
+  assert.is(result.crawlFrom, "/Users/misha/oscar/src");
+  assert.is(result.errors.length, 1);
+  assert.ok(/^unknown processor: foo/.test(result.errors[0]));
+});
+
+ValidateConfig("array form - not a tuple", () => {
+  const result = validateConfig(
+    {
+      crawlFrom: "./src",
+      processors: [["count-components"]],
+    },
+    "/Users/misha/oscar"
+  );
+
+  assert.equal(result, {
+    crawlFrom: "/Users/misha/oscar/src",
+    errors: [
+      `processor is in a form of array should have exactly 2 items (1 item found)`,
+    ],
+  });
+});
+
+ValidateConfig("array form - processor name is not a string", () => {
+  const result = validateConfig(
+    {
+      crawlFrom: "./src",
+      processors: [[() => {}, "count-components"]],
+    },
+    "/Users/misha/oscar"
+  );
+
+  assert.equal(result, {
+    crawlFrom: "/Users/misha/oscar/src",
+    errors: [
+      `when processor is a tuple, the first item is a name and should be a string (function found)`,
+    ],
+  });
+});
+
+ValidateConfig("array form - unknown processor", () => {
+  const result = validateConfig(
+    {
+      crawlFrom: "./src",
+      processors: [["foo", {}]],
+    },
+    "/Users/misha/oscar"
+  );
+
+  assert.is(result.crawlFrom, "/Users/misha/oscar/src");
+  assert.is(result.errors.length, 1);
+  assert.ok(/^unknown processor: foo/.test(result.errors[0]));
+});
+
+ValidateConfig("array form - processor options is not an object", () => {
+  const result = validateConfig(
+    {
+      crawlFrom: "./src",
+      processors: [["count-components", () => {}]],
+    },
+    "/Users/misha/oscar"
+  );
+
+  assert.equal(result, {
+    crawlFrom: "/Users/misha/oscar/src",
+    errors: [
+      `when processor is a tuple, the second item is options and should be an object`,
+    ],
+  });
+});
+
+ValidateConfig("array form - processor name is unsupported type", () => {
+  const result = validateConfig(
+    {
+      crawlFrom: "./src",
+      processors: [true, () => {}],
+    },
+    "/Users/misha/oscar"
+  );
+
+  assert.equal(result, {
+    crawlFrom: "/Users/misha/oscar/src",
+    errors: [
+      `processor should be a string, an array, or a function (boolean found)`,
+    ],
   });
 });
 
@@ -215,7 +311,7 @@ ValidateConfig("valid config with all options", () => {
       },
       includeSubComponents: true,
       importedFrom: "basis",
-      processReport: () => {},
+      processors: ["count-components"],
     },
     "/Users/misha/oscar"
   );

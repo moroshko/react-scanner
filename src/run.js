@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const fdir = require("fdir");
+const isPlainObject = require("is-plain-object");
 const scan = require("./scan");
 const {
   pluralize,
@@ -9,8 +10,9 @@ const {
 } = require("./utils");
 
 const DEFAULT_GLOBS = ["**/!(*.test|*.spec).@(js|ts)?(x)"];
+const DEFAULT_PROCESSORS = ["count-components-and-props"];
 
-function run({ config, configDir, crawlFrom, startTime }) {
+async function run({ config, configDir, crawlFrom, startTime }) {
   const globs = config.globs || DEFAULT_GLOBS;
   const files = new fdir()
     .glob(...globs)
@@ -36,40 +38,57 @@ function run({ config, configDir, crawlFrom, startTime }) {
     });
   }
 
-  const logSummary = () => {
-    const endTime = process.hrtime.bigint();
+  const endTime = process.hrtime.bigint();
 
-    // eslint-disable-next-line no-console
-    console.log(
-      `Scanned ${pluralize(files.length, "file")} in ${
-        Number(endTime - startTime) / 1e9
-      } seconds`
-    );
+  // eslint-disable-next-line no-console
+  console.log(
+    `Scanned ${pluralize(files.length, "file")} in ${
+      Number(endTime - startTime) / 1e9
+    } seconds`
+  );
+
+  const processors =
+    config.processors && config.processors.length > 0
+      ? config.processors
+      : DEFAULT_PROCESSORS;
+  const prevResults = [];
+  const output = (data, destination = "stdout") => {
+    const dataStr = isPlainObject(data)
+      ? JSON.stringify(data, null, 2)
+      : String(data);
+
+    if (destination === "stdout") {
+      // eslint-disable-next-line no-console
+      console.log(dataStr);
+    } else {
+      const filePath = path.resolve(configDir, destination);
+
+      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+      fs.writeFileSync(filePath, dataStr);
+    }
   };
 
-  if (typeof config.processReport === "function") {
-    config.processReport({
+  for (const processor of processors) {
+    let processorFn;
+
+    if (typeof processor === "string") {
+      processorFn = require(`./processors/${processor}`)();
+    } else if (Array.isArray(processor)) {
+      processorFn = require(`./processors/${processor[0]}`)(processor[1]);
+    } else if (typeof processor === "function") {
+      processorFn = processor;
+    }
+
+    const result = await processorFn({
       report,
+      prevResults,
+      prevResult: prevResults[prevResults.length - 1],
       forEachComponent: forEachComponent(report),
       sortObjectKeysByValue,
-      writeFile: (outputPath, object) => {
-        const data = JSON.stringify(object, null, 2);
-        const filePath = path.resolve(configDir, outputPath);
-
-        fs.mkdirSync(path.dirname(filePath), { recursive: true });
-        fs.writeFileSync(filePath, data);
-
-        logSummary();
-
-        // eslint-disable-next-line no-console
-        console.log(`See: ${filePath}`);
-      },
+      output,
     });
-  } else {
-    logSummary();
 
-    // eslint-disable-next-line no-console
-    console.log(JSON.stringify(report, null, 2));
+    prevResults.push(result);
   }
 }
 

@@ -4,7 +4,7 @@
 
 `react-scanner` statically analyzes the given code (TypeScript supported) and extracts React components and props usage.
 
-First, it crawls the given directory and compiles a list of files to be scanned. Then, it scans every file by extracting rendered components and their props into a JSON report.
+First, it crawls the given directory and compiles a list of files to be scanned. Then, it scans every file and extracts rendered components and their props into a JSON report.
 
 For example, let's say we have the following `index.js` file:
 
@@ -111,7 +111,13 @@ Running `react-scanner` on it will create the following JSON report:
 ```
 </details>
 
-At this point, it's up to you what to do with this report. You could store it as is or transform it to something a bit more useful. For example, you could count how many times each component is used, find instances of a specific prop that you consider deprecating, etc.
+This raw JSON report is used then to generate something that is useful to you. For example, you might want to know:
+
+- How often a cetrain component is used in your design system? (see `count-components` processor)
+- How often a certain prop in a given component is used? (see `count-component-and-props` processor)
+- Looking at some prop in a given component, what's the distribution of values used? (e.g. you might consider deprecating a certain value)
+
+Once you have the result you are interested in, you can write it to a file or simply log it to the console.
 
 ## Installation
 
@@ -133,104 +139,13 @@ The config file can be located anywhere and it must export an object like this:
 
 ```js
 module.exports = {
-  // [required]
-  // Type: string
-  // The path of the directory to start crawling from (absolute or relative to the config file location).
   crawlFrom: "./src",
-
-  // [optional]
-  // Type: function
-  // Directory names to exclude from crawling.
-  exclude: (dir) => {
-    // Note: dir is just the directory name, not the path.
-    return ["utils", "tests"].includes(dir);
-  },
-
-  // [optional]
-  // Type: array of strings (globs)
-  // Default: ["**/!(*.test|*.spec).@(js|ts)?(x)"]
-  // Only files matching these globs will be scanned (see here for glob syntax: https://github.com/micromatch/picomatch#globbing-features).
-  globs: ["**/*.js"],
-
-  // [optional]
-  // Type: object where all values are true
-  // Components to report (omit to report all components).
-  components: {
-    Button: true,
-    Footer: true,
-    Text: true,
-  },
-
-  // [optional]
-  // Type: boolean
-  // Default: false
-  // Whether to report subcomponents or not.
-  // false - Footer will be reported, but Footer.Content will not.
-  // true - Footer.Content will be reported, as well as Footer.Content.Legal, etc.
   includeSubComponents: true,
-
-  // [optional]
-  // Type: string or RegExp.
-  // Before reporting a component, we'll check if it's imported from a module name matching importedFrom.
-  // Only if there is a match, the component will be reported.
-  // When omitted, this check is bypassed.
   importedFrom: "basis",
-
-  // [optional]
-  // Type: function
-  // Specify what to do with the report.
-  // In this example, we count how many times each component and its props is used, sort
-  // by count, and write the result to a file.
-  // Note, the components in the report will be nested when includeSubComponents is true.
-  // To help traversing the report, we provide a convenience forEachComponent function.
-  // The processReport function gets an object with the following in it:
-  // * report - the full JSON report
-  // * forEachComponent - recursively visits every component in the report
-  // * sortObjectKeysByValue - sorts object keys by some function of the value (this function is identity by default)
-  // * writeFile - use it to store the result object in a file
-  // When processReport is not specified, the report is logged out.
-  processReport: ({ forEachComponent, sortObjectKeysByValue, writeFile }) => {
-    let output = {};
-
-    // count instances
-    forEachComponent(({ componentName, component }) => {
-      const { instances } = component;
-
-      if (!instances) {
-        return;
-      }
-
-      output[componentName] = {
-        instances: instances.length,
-        props: {},
-      };
-
-      instances.forEach((instance) => {
-        for (const prop in instance.props) {
-          if (output[componentName].props[prop] === undefined) {
-            output[componentName].props[prop] = 0;
-          }
-
-          output[componentName].props[prop] += 1;
-        }
-      });
-
-      output[componentName].props = sortObjectKeysByValue(
-        output[componentName].props
-      );
-    });
-
-    output = sortObjectKeysByValue(output, (component) => component.instances);
-
-    writeFile(
-      "./reports/oscar.json", // absolute or relative to the config file location
-      output // must be an object, will be JSON.stringified
-    );
-  },
 };
 ```
 
-This `processReport` would produce something like this:
+Running `react-scanner` with this config would output something like this to the console:
 
 ```json
 {
@@ -256,6 +171,194 @@ This `processReport` would produce something like this:
   }
 }
 ```
+
+Here are all the available config options:
+
+| Option                 | Type            | Description                                                                                                                                                                                                                       |
+| ---------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `crawlFrom`            | string          | The path of the directory to start crawling from.<br>Absolute or relative to the config file location.                                                                                                                            |
+| `exclude`              | function        | Accepts a directory name (not the path!) and should return `true` if the directory should be excluded from crawling.                                                                                                              |
+| `globs`                | array           | Only files matching these globs will be scanned. See [here](https://github.com/micromatch/picomatch#globbing-features) for glob syntax.<br>Default: `["**/!(*.test|*.spec).@(js|ts)?(x)"]`                                        |
+| `components`           | object          | Components to report. Omit to report all components.                                                                                                                                                                              |
+| `includeSubComponents` | boolean         | Whether to report subcomponents or not.<br>When `false`, `Footer` will be reported, but `Footer.Content` will not.<br>When `true`, `Footer.Content` will be reported, as well as `Footer.Content.Legal`, etc.<br>Default: `false` |
+| `importedFrom`         | string or regex | Before reporting a component, we'll check if it's imported from a module name matching `importedFrom` and, only if there is a match, the component will be reported.<br>When omitted, this check is bypassed.                     |
+| `processors`           | array           | See [Processors](#processors).<br>Default: `["count-components-and-props"]`                                                                                                                                                       |
+
+## Processors
+
+Scanning the files results in a JSON report. Add processors to tell `react-scanner` what to do with this report.
+
+### Built-in processors
+
+`react-scanner` comes with some ready to use processors.
+
+To use a built-in processor, simply specify its name as a string, e.g.:
+
+```
+processors: ["count-components"]
+```
+
+You can also use a tuple form to pass options to a built-in processor, e.g.:
+
+```
+processors: [
+  ["count-components", { outputTo: "/path/to/my-report.json" }]
+]
+```
+
+All the built-in processors support the following options:
+
+| Option     | Type   | Description                                                                                                                                 |
+| ---------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `outputTo` | string | Where to output the result.<br>Absolute or relative to the config file location.<br>When omitted, the result is printed out to the console. |
+
+Here are the built-in processors that `react-scanner` comes with:
+
+#### `count-components`
+
+Example output:
+
+```json
+{
+  "Text": 10,
+  "Button": 5,
+  "Link": 3
+}
+```
+
+#### `count-components-and-props`
+
+Example output:
+
+```json
+{
+  "Text": {
+    "instances": 17,
+    "props": {
+      "margin": 6,
+      "color": 4,
+      "textStyle": 1
+    }
+  },
+  "Button": {
+    "instances": 10,
+    "props": {
+      "width": 10,
+      "variant": 4,
+      "type": 2
+    }
+  },
+  "Footer": {
+    "instances": 1,
+    "props": {}
+  }
+}
+```
+
+#### `raw-report`
+
+Example output:
+
+```json
+{
+  "Text": {
+    "instances": [
+      {
+        "props": {
+          "textStyle": "subtitle2"
+        },
+        "propsSpread": false,
+        "location": {
+          "file": "/path/to/file",
+          "start": {
+            "line": 9,
+            "column": 9
+          }
+        }
+      },
+      {
+        "props": {
+          "margin": "4 0 0 0"
+        },
+        "propsSpread": false,
+        "location": {
+          "file": "/path/to/file",
+          "start": {
+            "line": 12,
+            "column": 9
+          }
+        }
+      }
+    ]
+  },
+  "Link": {
+    "instances": [
+      {
+        "props": {
+          "href": "https://github.com/moroshko/react-scanner",
+          "newTab": null
+        },
+        "propsSpread": false,
+        "location": {
+          "file": "/path/to/file",
+          "start": {
+            "line": 14,
+            "column": 11
+          }
+        }
+      }
+    ]
+  },
+  "Container": {
+    "instances": [
+      {
+        "props": {
+          "margin": "4",
+          "hasBreakpointWidth": null
+        },
+        "propsSpread": false,
+        "location": {
+          "file": "/path/to/file",
+          "start": {
+            "line": 8,
+            "column": 7
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+### Custom processors
+
+We saw above that built-in processors come in the form of a string or a tuple.
+
+Custom processors are functions, and can be asynchronous!
+
+If the processor function returns a `Promise`, it will be awaited before the next processor kicks in. This way, you can use previous processors results in your processor function.
+
+Here is an example of taking the output of the built-in `count-components-and-props` processor and sending it to your storage solution.
+
+```
+reporters: [
+  "count-components-and-props",
+  ({ prevResult }) => {
+    return axios.post("/my/storage/solution", prevResult);
+  }
+]
+```
+
+Processor functions receive an object with the following keys in it:
+
+| Key                     | Type     | Description                                                                                                                                                                                                                                                                                                    |
+| ----------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `report`                | object   | The raw JSON report.                                                                                                                                                                                                                                                                                           |
+| `prevResults`           | array    | Previous processors results.                                                                                                                                                                                                                                                                                   |
+| `prevResult`            | any      | The last item in `prevResults`. Just for convenience.                                                                                                                                                                                                                                                          |
+| `forEachComponent`      | function | Helper function to recursively traverse the raw JSON report. The function you pass in is called for every component in the report, and it gets an object with `componentName` and `component` in it. Check the implementation of `count-components-and-props` for a usage example.                             |
+| `sortObjectKeysByValue` | function | Helper function that sorts object keys by some function of the value. Check the implementation of `count-components-and-props` for a usage example.                                                                                                                                                            |
+| `output`                | function | Helper function that outputs the given data. Its first parameter is the data you want to output. The second parameter is the destination. When the second parameter is omitted, it outputs to the console. To output to the file system, pass an absolute path or a relative path to the config file location. |
 
 ## License
 

@@ -4,15 +4,17 @@
   "description": "Extract React components and props usage from code.",
   "bin": "bin/react-scanner",
   "scripts": {
+    "build": "node scripts/processors.js",
     "lint": "eslint --max-warnings 0 \"**/*.js\"",
     "prettier": "prettier --write \"**/*.{js,json,md}\"",
     "test": "uvu src test",
     "test:watch": "watchlist src -- npm t",
-    "test:coverage": "c8 --include=src/**/*.js -o coverage --check-coverage --branches 100 --functions 100 --lines 100 --statements 100 npm t"
+    "test:coverage": "c8 --include=src/**/*.js -o coverage --check-coverage --branches 100 --functions 100 --lines 100 --statements 100 npm t",
+    "prepublishOnly": "npm run build"
   },
   "husky": {
     "hooks": {
-      "pre-commit": "npm run prettier && npm run lint && npm run test:coverage"
+      "pre-commit": "npm run build && git add src/processors/processors.json && npm run prettier && npm run lint && npm run test:coverage"
     }
   },
   "dependencies": {

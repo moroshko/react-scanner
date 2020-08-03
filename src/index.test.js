@@ -6,179 +6,33 @@ const assert = require("uvu/assert");
 
 const Index = suite("index");
 
-Index("minimal config - outputs to console", async () => {
+function parseStdout(stdout) {
+  const firstLineBreakIndex = stdout.indexOf("\n");
+
+  if (firstLineBreakIndex === -1) {
+    return {
+      firstLine: stdout,
+      restOutput: null,
+    };
+  }
+
+  return {
+    firstLine: stdout.slice(0, firstLineBreakIndex),
+    restOutput: stdout.slice(firstLineBreakIndex + 1),
+  };
+}
+
+Index("no processors", async () => {
   const { exitCode, stdout } = await execa("./bin/react-scanner", [
     "-c",
-    "./test/configs/minimal.config.js",
+    "./test/configs/noProcessors.config.js",
   ]);
-
-  const firstLineBreakIndex = stdout.indexOf("\n");
-  const firstLine = stdout.slice(0, firstLineBreakIndex);
-  const restOutput = stdout.slice(firstLineBreakIndex + 1);
-  const codePath = path.resolve(__dirname, "../test/code");
+  const { firstLine, restOutput } = parseStdout(stdout);
 
   assert.is(exitCode, 0);
   assert.ok(/^Scanned 2 files in [\d.]+ seconds$/.test(firstLine));
   assert.snapshot(
     restOutput,
-    JSON.stringify(
-      {
-        Container: {
-          instances: [
-            {
-              props: {
-                margin: "4",
-                hasBreakpointWidth: null,
-              },
-              propsSpread: false,
-              location: {
-                file: `${codePath}/Home.js`,
-                start: {
-                  line: 6,
-                  column: 5,
-                },
-              },
-            },
-          ],
-        },
-        Text: {
-          instances: [
-            {
-              props: {
-                textStyle: "subtitle2",
-              },
-              propsSpread: false,
-              location: {
-                file: `${codePath}/Home.js`,
-                start: {
-                  line: 7,
-                  column: 7,
-                },
-              },
-            },
-            {
-              props: {
-                margin: "4 0 0 0",
-              },
-              propsSpread: false,
-              location: {
-                file: `${codePath}/Home.js`,
-                start: {
-                  line: 10,
-                  column: 7,
-                },
-              },
-            },
-          ],
-        },
-        Link: {
-          instances: [
-            {
-              props: {
-                href: "https://github.com/moroshko/react-scanner",
-                newTab: null,
-              },
-              propsSpread: false,
-              location: {
-                file: `${codePath}/Home.js`,
-                start: {
-                  line: 12,
-                  column: 9,
-                },
-              },
-            },
-          ],
-        },
-        div: {
-          instances: [
-            {
-              props: {
-                style: "(ObjectExpression)",
-              },
-              propsSpread: false,
-              location: {
-                file: `${codePath}/Home.js`,
-                start: {
-                  line: 16,
-                  column: 7,
-                },
-              },
-            },
-          ],
-        },
-        BasisProvider: {
-          instances: [
-            {
-              props: {
-                theme: "(Identifier)",
-              },
-              propsSpread: false,
-              location: {
-                file: `${codePath}/index.js`,
-                start: {
-                  line: 8,
-                  column: 5,
-                },
-              },
-            },
-          ],
-        },
-        Home: {
-          instances: [
-            {
-              props: {},
-              propsSpread: false,
-              location: {
-                file: `${codePath}/index.js`,
-                start: {
-                  line: 9,
-                  column: 7,
-                },
-              },
-            },
-          ],
-        },
-        App: {
-          instances: [
-            {
-              props: {},
-              propsSpread: false,
-              location: {
-                file: `${codePath}/index.js`,
-                start: {
-                  line: 14,
-                  column: 17,
-                },
-              },
-            },
-          ],
-        },
-      },
-      null,
-      2
-    )
-  );
-});
-
-Index("valid config - outputs to file", async () => {
-  const { exitCode, stdout } = await execa("./bin/react-scanner", [
-    "-c",
-    "./test/configs/withProcessReport.config.js",
-  ]);
-  const firstLineBreakIndex = stdout.indexOf("\n");
-  const firstLine = stdout.slice(0, firstLineBreakIndex);
-  const restOutput = stdout.slice(firstLineBreakIndex + 1);
-  const reportPath = path.resolve(
-    __dirname,
-    "../test/reports/withProcessReport.json"
-  );
-  const report = fs.readFileSync(reportPath, "utf8");
-
-  assert.is(exitCode, 0);
-  assert.ok(/^Scanned 2 files in [\d.]+ seconds$/.test(firstLine));
-  assert.equal(restOutput, `See: ${reportPath}`);
-  assert.snapshot(
-    report,
     JSON.stringify(
       {
         Text: {
@@ -196,13 +50,6 @@ Index("valid config - outputs to file", async () => {
           instances: 1,
           props: {
             theme: 1,
-          },
-        },
-        Container: {
-          instances: 1,
-          props: {
-            hasBreakpointWidth: 1,
-            margin: 1,
           },
         },
         Home: {
@@ -227,6 +74,108 @@ Index("valid config - outputs to file", async () => {
       2
     )
   );
+});
+
+Index("single processor", async () => {
+  const { exitCode, stdout } = await execa("./bin/react-scanner", [
+    "-c",
+    "./test/configs/singleProcessor.config.js",
+  ]);
+  const { firstLine } = parseStdout(stdout);
+  const reportPath = path.resolve(
+    __dirname,
+    "../test/reports/singleProcessor.json"
+  );
+  const report = fs.readFileSync(reportPath, "utf8");
+
+  assert.is(exitCode, 0);
+  assert.ok(/^Scanned 2 files in [\d.]+ seconds$/.test(firstLine));
+  assert.snapshot(
+    report,
+    JSON.stringify(
+      {
+        Text: 2,
+        App: 1,
+        BasisProvider: 1,
+        Home: 1,
+        Link: 1,
+        div: 1,
+      },
+      null,
+      2
+    )
+  );
+});
+
+Index("multiple processors", async () => {
+  const { exitCode, stdout } = await execa("./bin/react-scanner", [
+    "-c",
+    "./test/configs/multipleProcessors.config.js",
+  ]);
+  const { firstLine, restOutput } = parseStdout(stdout);
+  const countComponentsAndPropsReportPath = path.resolve(
+    __dirname,
+    "../test/reports/multipleProcessors-countComponentsAndProps.json"
+  );
+  const customReportPath = path.resolve(
+    __dirname,
+    "../test/reports/multipleProcessors-custom.txt"
+  );
+  const countComponentsAndPropsReport = fs.readFileSync(
+    countComponentsAndPropsReportPath,
+    "utf8"
+  );
+  const customReport = fs.readFileSync(customReportPath, "utf8");
+
+  assert.is(exitCode, 0);
+  assert.ok(/^Scanned 2 files in [\d.]+ seconds$/.test(firstLine));
+  assert.snapshot(
+    restOutput,
+    JSON.stringify(
+      {
+        Text: 2,
+        BasisProvider: 1,
+        Link: 1,
+        "React.Fragment": 1,
+      },
+      null,
+      2
+    )
+  );
+  assert.snapshot(
+    countComponentsAndPropsReport,
+    JSON.stringify(
+      {
+        Text: {
+          instances: 2,
+          props: {
+            margin: 1,
+            textStyle: 1,
+          },
+        },
+        BasisProvider: {
+          instances: 1,
+          props: {
+            theme: 1,
+          },
+        },
+        Link: {
+          instances: 1,
+          props: {
+            href: 1,
+            newTab: 1,
+          },
+        },
+        "React.Fragment": {
+          instances: 1,
+          props: {},
+        },
+      },
+      null,
+      2
+    )
+  );
+  assert.is(customReport, "something");
 });
 
 Index("invalid config", async () => {

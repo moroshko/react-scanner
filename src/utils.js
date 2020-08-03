@@ -1,6 +1,11 @@
 const fs = require("fs");
 const path = require("path");
 const isPlainObject = require("is-plain-object");
+const processors = require("./processors/processors");
+
+function pluralize(count, word) {
+  return count === 1 ? `1 ${word}` : `${count} ${word}s`;
+}
 
 function validateConfig(config, configDir) {
   const result = {
@@ -73,17 +78,62 @@ function validateConfig(config, configDir) {
     }
   }
 
-  if (config.processReport !== undefined) {
-    if (typeof config.processReport !== "function") {
-      result.errors.push(`processReport should be a function`);
+  if (config.processors !== undefined) {
+    if (Array.isArray(config.processors)) {
+      for (let i = 0, len = config.processors.length; i < len; i++) {
+        const processor = config.processors[i];
+
+        if (typeof processor === "string") {
+          if (processors[processor] === undefined) {
+            result.errors.push(
+              `unknown processor: ${processor} (known processors are: ${Object.keys(
+                processors
+              ).join(", ")})`
+            );
+          }
+        } else if (Array.isArray(processor)) {
+          if (processor.length !== 2) {
+            result.errors.push(
+              `processor is in a form of array should have exactly 2 items (${pluralize(
+                processor.length,
+                "item"
+              )} found)`
+            );
+            break;
+          }
+
+          const [name, options] = processor;
+
+          if (typeof name !== "string") {
+            result.errors.push(
+              `when processor is a tuple, the first item is a name and should be a string (${typeof name} found)`
+            );
+            break;
+          } else if (processors[name] === undefined) {
+            result.errors.push(
+              `unknown processor: ${name} (known processors are: ${Object.keys(
+                processors
+              ).join(", ")})`
+            );
+          }
+
+          if (isPlainObject(options) === false) {
+            result.errors.push(
+              `when processor is a tuple, the second item is options and should be an object`
+            );
+          }
+        } else if (typeof processor !== "function") {
+          result.errors.push(
+            `processor should be a string, an array, or a function (${typeof processor} found)`
+          );
+        }
+      }
+    } else {
+      result.errors.push(`processors should be an array`);
     }
   }
 
   return result;
-}
-
-function pluralize(count, word) {
-  return count === 1 ? `1 ${word}` : `${count} ${word}s`;
 }
 
 const forEachComponent = (report) => (callback) => {
@@ -126,8 +176,8 @@ function sortObjectKeysByValue(obj, mapValue = (value) => value) {
 }
 
 module.exports = {
-  validateConfig,
   pluralize,
+  validateConfig,
   forEachComponent,
   sortObjectKeysByValue,
 };

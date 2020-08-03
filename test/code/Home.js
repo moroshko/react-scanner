@@ -1,9 +1,9 @@
 import React from "react";
-import { Container, Text, Link } from "basis";
+import { Text, Link } from "basis";
 
 function Home() {
   return (
-    <Container margin="4" hasBreakpointWidth>
+    <React.Fragment>
       <Text textStyle="subtitle2">
         Want to know how your design system components are being used?
       </Text>
@@ -14,7 +14,7 @@ function Home() {
         </Link>
       </Text>
       <div style={{ marginTop: 16 }}>Hope you like it :)</div>
-    </Container>
+    </React.Fragment>
   );
 }
 
