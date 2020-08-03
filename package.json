@@ -14,7 +14,7 @@
   },
   "husky": {
     "hooks": {
-      "pre-commit": "npm run build && git add src/processors/processors.json && npm run prettier && npm run lint && npm run test:coverage"
+      "pre-commit": "npm run build && npm run prettier && npm run lint && npm run test:coverage && git add src/processors/processors.json"
     }
   },
   "dependencies": {
