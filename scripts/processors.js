@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const fdir = require("fdir");
+const { fdir } = require("fdir");
 
 const processorsMap = new fdir()
   .glob(["**/!(*.test).js"])

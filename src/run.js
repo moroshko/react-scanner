@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const fdir = require("fdir");
+const { fdir } = require("fdir");
 const isPlainObject = require("is-plain-object");
 const scan = require("./scan");
 const {
