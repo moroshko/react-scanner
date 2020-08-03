@@ -15,5 +15,5 @@ const processorsMap = new fdir()
 
 fs.writeFileSync(
   path.resolve(__dirname, "../src/processors/processors.json"),
-  JSON.stringify(processorsMap, null, 2)
+  JSON.stringify(processorsMap, null, 2) + "\n"
 );

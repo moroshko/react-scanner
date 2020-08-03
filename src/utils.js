@@ -172,7 +172,10 @@ function sortObjectKeysByValue(obj, mapValue = (value) => value) {
       : 1;
   });
 
-  return Object.fromEntries(entries);
+  return entries.reduce((acc, [key, value]) => {
+    acc[key] = value;
+    return acc;
+  }, {});
 }
 
 module.exports = {
