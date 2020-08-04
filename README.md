@@ -114,7 +114,7 @@ Running `react-scanner` on it will create the following JSON report:
 This raw JSON report is used then to generate something that is useful to you. For example, you might want to know:
 
 - How often a cetrain component is used in your design system? (see [`count-components`](#count-components) processor)
-- How often a certain prop in a given component is used? (see [`count-component-and-props`](#count-components-and-props) processor)
+- How often a certain prop in a given component is used? (see [`count-components-and-props`](#count-components-and-props) processor)
 - Looking at some prop in a given component, what's the distribution of values used? (e.g. you might consider deprecating a certain value)
 
 Once you have the result you are interested in, you can write it to a file or simply log it to the console.
