@@ -47,7 +47,7 @@
     "src/**/!(*.test).@(js|json)"
   ],
   "engines": {
-    "node": ">=10.12.0"
+    "node": "14.8.0"
   },
   "keywords": [
     "react",
