@@ -1,15 +1,19 @@
 {
   "extends": ["config:base"],
   "schedule": "every weekend",
-  "rangeStrategy": "pin",
   "packageRules": [
     {
-      "packagePatterns": ["*"],
       "depTypeList": ["dependencies", "devDependencies"],
-      "minor": {
-        "groupName": "all non-major dependencies",
-        "groupSlug": "all-minor-patch"
-      }
+      "updateTypes": ["minor", "patch"],
+      "rangeStrategy": "pin",
+      "groupName": "minor and patch"
+    },
+    {
+      "depTypeList": ["dependencies", "devDependencies"],
+      "updateTypes": ["major"],
+      "rangeStrategy": "pin",
+      "dependencyDashboardApproval": true,
+      "dependencyDashboardAutoclose": true
     }
   ]
 }
