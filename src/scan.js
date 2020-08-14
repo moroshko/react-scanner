@@ -8,16 +8,16 @@ const parseOptions = {
   jsx: true,
 };
 
-function getComponentName(nameObj) {
+function getComponentNameFromAST(nameObj) {
   switch (nameObj.type) {
     case "JSXIdentifier": {
       return nameObj.name;
     }
 
     case "JSXMemberExpression": {
-      return `${getComponentName(nameObj.object)}.${getComponentName(
-        nameObj.property
-      )}`;
+      return `${getComponentNameFromAST(
+        nameObj.object
+      )}.${getComponentNameFromAST(nameObj.property)}`;
     }
 
     /* c8 ignore next 3 */
@@ -48,9 +48,10 @@ function getPropValue(node) {
   throw new Error(`Unknown node type: ${node.type}`);
 }
 
-function getInstanceInfo(node, filePath) {
+function getInstanceInfo({ node, filePath, importInfo }) {
   const { attributes } = node;
   const result = {
+    ...(importInfo !== undefined && { importInfo }),
     props: {},
     propsSpread: false,
     location: {
@@ -82,6 +83,7 @@ function scan({
   components,
   includeSubComponents = false,
   importedFrom,
+  getComponentName = ({ imported, local }) => imported || local,
   report,
 }) {
   let ast;
@@ -106,9 +108,16 @@ function scan({
           case "ImportDefaultSpecifier":
           case "ImportSpecifier":
           case "ImportNamespaceSpecifier": {
-            const imported = specifiers[i].local.name;
+            const imported = specifiers[i].imported
+              ? specifiers[i].imported.name
+              : null;
+            const local = specifiers[i].local.name;
 
-            importsMap[imported] = moduleName;
+            importsMap[local] = {
+              ...(imported !== null && { imported }),
+              local,
+              moduleName,
+            };
             break;
           }
 
@@ -122,15 +131,29 @@ function scan({
       }
     },
     JSXOpeningElement(node) {
-      const name = getComponentName(node.name);
+      const name = getComponentNameFromAST(node.name);
       const nameParts = name.split(".");
+      const [firstPart, ...restParts] = nameParts;
+      const actualFirstPart = importsMap[firstPart]
+        ? getComponentName(importsMap[firstPart])
+        : firstPart;
       const shouldReportComponent = () => {
         if (components) {
-          if (
-            components[name] === undefined &&
-            components[nameParts[0]] === undefined
-          ) {
-            return false;
+          if (nameParts.length === 1) {
+            if (components[actualFirstPart] === undefined) {
+              return false;
+            }
+          } else {
+            const actualComponentName = [actualFirstPart, ...restParts].join(
+              "."
+            );
+
+            if (
+              components[actualFirstPart] === undefined &&
+              components[actualComponentName] === undefined
+            ) {
+              return false;
+            }
           }
         }
 
@@ -141,7 +164,11 @@ function scan({
         }
 
         if (importedFrom) {
-          const actualImportedFrom = importsMap[nameParts[0]];
+          if (!importsMap[firstPart]) {
+            return false;
+          }
+
+          const actualImportedFrom = importsMap[firstPart].moduleName;
 
           if (importedFrom instanceof RegExp) {
             if (importedFrom.test(actualImportedFrom) === false) {
@@ -159,7 +186,9 @@ function scan({
         return astray.SKIP;
       }
 
-      const componentPath = nameParts.join(".components.");
+      const componentPath = [actualFirstPart, ...restParts].join(
+        ".components."
+      );
       let componentInfo = getObjectPath(report, componentPath);
 
       if (!componentInfo) {
@@ -171,7 +200,11 @@ function scan({
         componentInfo.instances = [];
       }
 
-      const info = getInstanceInfo(node, filePath);
+      const info = getInstanceInfo({
+        node,
+        filePath,
+        importInfo: importsMap[firstPart],
+      });
 
       componentInfo.instances.push(info);
     },

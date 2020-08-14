@@ -8,7 +8,7 @@ Scan.before((context) => {
   context.getReport = (
     filePath,
     code,
-    { components, includeSubComponents, importedFrom } = {}
+    { components, includeSubComponents, importedFrom, getComponentName } = {}
   ) => {
     const report = {};
 
@@ -23,6 +23,7 @@ Scan.before((context) => {
       ...(components !== undefined && { components }),
       ...(includeSubComponents !== undefined && { includeSubComponents }),
       ...(importedFrom !== undefined && { importedFrom }),
+      ...(getComponentName !== undefined && { getComponentName }),
       report,
     });
 
@@ -513,13 +514,13 @@ Scan("typescript", ({ getReport }) => {
     "typescript.ts",
     `
     /* @jsx jsx */
-    import { jsx } from '@emotion/core'; // eslint-disable-line
-    import React, { ReactNode, ElementType, useContext } from 'react'; // eslint-disable-line
-    import { Box, BoxProps, useTheme } from '@chakra-ui/core';
-    import capsize from 'capsize';
-    import siteFontContext from './SiteProvider';
-    import { FontMetrics } from 'capsize';
-    import fontSizes from '../fontSizes';
+    import { jsx } from "@emotion/core"; // eslint-disable-line
+    import React, { ReactNode, ElementType, useContext } from "react"; // eslint-disable-line
+    import { Box, BoxProps, useTheme } from "@chakra-ui/core";
+    import capsize from "capsize";
+    import siteFontContext from "./SiteProvider";
+    import { FontMetrics } from "capsize";
+    import fontSizes from "../fontSizes";
 
     export interface HeadingProps {
       children: ReactNode;
@@ -580,6 +581,11 @@ Scan("typescript", ({ getReport }) => {
     Box: {
       instances: [
         {
+          importInfo: {
+            imported: "Box",
+            local: "Box",
+            moduleName: "@chakra-ui/core",
+          },
           props: {
             as: "(LogicalExpression)",
             fontFamily: "(MemberExpression)",
@@ -633,6 +639,10 @@ Scan("importedFrom default export", ({ getReport }) => {
     Header: {
       instances: [
         {
+          importInfo: {
+            local: "Header",
+            moduleName: "my-design-system",
+          },
           props: {},
           propsSpread: false,
           location: {
@@ -663,6 +673,11 @@ Scan("importedFrom named export", ({ getReport }) => {
     Header: {
       instances: [
         {
+          importInfo: {
+            imported: "Header",
+            local: "Header",
+            moduleName: "basis",
+          },
           props: {},
           propsSpread: false,
           location: {
@@ -682,9 +697,9 @@ Scan("importedFrom named export with alias", ({ getReport }) => {
   const report = getReport(
     "imported-from-named-export-with-alias.js",
     `
-    import { CoreHeader as Header } from "basis";
+    import { Header as MyHeader } from "basis";
     
-    <Header />
+    <MyHeader />
   `,
     { importedFrom: "basis" }
   );
@@ -693,6 +708,11 @@ Scan("importedFrom named export with alias", ({ getReport }) => {
     Header: {
       instances: [
         {
+          importInfo: {
+            imported: "Header",
+            local: "MyHeader",
+            moduleName: "basis",
+          },
           props: {},
           propsSpread: false,
           location: {
@@ -707,6 +727,60 @@ Scan("importedFrom named export with alias", ({ getReport }) => {
     },
   });
 });
+
+Scan(
+  "importedFrom named export with alias - sub component",
+  ({ getReport }) => {
+    const report = getReport(
+      "imported-from-named-export-with-alias-sub-component.js",
+      `
+    import { Header as MyHeader } from "basis";
+    
+    <>
+      <MyHeader.Foo.Bar />
+      <Header.Legal.Section />
+      <Footer.Legal />
+    </>
+  `,
+      {
+        includeSubComponents: true,
+        importedFrom: "basis",
+      }
+    );
+
+    assert.equal(report, {
+      Header: {
+        components: {
+          Foo: {
+            components: {
+              Bar: {
+                instances: [
+                  {
+                    importInfo: {
+                      imported: "Header",
+                      local: "MyHeader",
+                      moduleName: "basis",
+                    },
+                    props: {},
+                    propsSpread: false,
+                    location: {
+                      file:
+                        "imported-from-named-export-with-alias-sub-component.js",
+                      start: {
+                        line: 5,
+                        column: 7,
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+);
 
 Scan("importedFrom entire module", ({ getReport }) => {
   const report = getReport(
@@ -731,6 +805,10 @@ Scan("importedFrom entire module", ({ getReport }) => {
         Header: {
           instances: [
             {
+              importInfo: {
+                local: "Basis",
+                moduleName: "basis",
+              },
               props: {},
               propsSpread: false,
               location: {
@@ -744,6 +822,142 @@ Scan("importedFrom entire module", ({ getReport }) => {
           ],
         },
       },
+    },
+  });
+});
+
+Scan("custom getComponentName", ({ getReport }) => {
+  const report = getReport(
+    "custom-get-component-name.js",
+    `
+    import MyBox from "@my/design-system/Box";
+    import { ImportedText as LocalText } from "@my/design-system/Text";
+    
+    <>
+      <MyBox />
+      <LocalText />
+    </>
+  `,
+    {
+      getComponentName: ({ moduleName }) => {
+        const parts = moduleName.split("/");
+
+        return parts[parts.length - 1];
+      },
+    }
+  );
+
+  assert.equal(report, {
+    Box: {
+      instances: [
+        {
+          importInfo: {
+            local: "MyBox",
+            moduleName: "@my/design-system/Box",
+          },
+          props: {},
+          propsSpread: false,
+          location: {
+            file: "custom-get-component-name.js",
+            start: {
+              line: 6,
+              column: 7,
+            },
+          },
+        },
+      ],
+    },
+    Text: {
+      instances: [
+        {
+          importInfo: {
+            imported: "ImportedText",
+            local: "LocalText",
+            moduleName: "@my/design-system/Text",
+          },
+          props: {},
+          propsSpread: false,
+          location: {
+            file: "custom-get-component-name.js",
+            start: {
+              line: 7,
+              column: 7,
+            },
+          },
+        },
+      ],
+    },
+  });
+});
+
+Scan("importAlias", ({ getReport }) => {
+  const report = getReport(
+    "import-alias.js",
+    `
+    import Text from "basis";
+    import { Text as AliasedText } from "basis";
+    import { Text as AnotherAliasedText } from "basis";
+    import "./styles.css";
+    
+    <>
+      <Text />
+      <AliasedText />
+      <AnotherAliasedText />
+    </>
+  `
+  );
+
+  assert.equal(report, {
+    Text: {
+      instances: [
+        {
+          importInfo: {
+            local: "Text",
+            moduleName: "basis",
+          },
+          props: {},
+          propsSpread: false,
+          location: {
+            file: "import-alias.js",
+            start: {
+              line: 8,
+              column: 7,
+            },
+          },
+        },
+        {
+          importInfo: {
+            imported: "Text",
+            local: "AliasedText",
+            moduleName: "basis",
+          },
+          props: {},
+          propsSpread: false,
+          location: {
+            file: "import-alias.js",
+            start: {
+              line: 9,
+              column: 7,
+            },
+          },
+        },
+        {
+          importInfo: {
+            imported: "Text",
+            local: "AnotherAliasedText",
+            moduleName: "basis",
+          },
+          props: {},
+          propsSpread: false,
+          location: {
+            file: "import-alias.js",
+            start: {
+              line: 10,
+              column: 7,
+            },
+          },
+        },
+      ],
     },
   });
 });

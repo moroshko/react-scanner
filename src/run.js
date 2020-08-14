@@ -22,7 +22,12 @@ async function run({ config, configDir, crawlFrom, startTime }) {
     .sync();
 
   let report = {};
-  const { components, includeSubComponents, importedFrom } = config;
+  const {
+    components,
+    includeSubComponents,
+    importedFrom,
+    getComponentName,
+  } = config;
 
   for (let i = 0, len = files.length; i < len; i++) {
     const filePath = files[i];
@@ -34,6 +39,7 @@ async function run({ config, configDir, crawlFrom, startTime }) {
       components,
       includeSubComponents,
       importedFrom,
+      getComponentName,
       report,
     });
   }

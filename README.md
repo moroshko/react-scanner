@@ -11,7 +11,13 @@ For example, let's say we have the following `index.js` file:
 ```jsx
 import React from "react";
 import ReactDOM from "react-dom";
-import { BasisProvider, defaultTheme, Container, Text, Link } from "basis";
+import {
+  BasisProvider,
+  defaultTheme,
+  Container,
+  Text,
+  Link as BasisLink,
+} from "basis";
 
 function App() {
   return (
@@ -22,9 +28,9 @@ function App() {
         </Text>
         <Text margin="4 0 0 0">
           Try{" "}
-          <Link href="https://github.com/moroshko/react-scanner" newTab>
+          <BasisLink href="https://github.com/moroshko/react-scanner" newTab>
             react-scanner
-          </Link>
+          </BasisLink>
         </Text>
       </Container>
     </BasisProvider>
@@ -41,9 +47,59 @@ Running `react-scanner` on it will create the following JSON report:
   
 ```json
 {
+  "BasisProvider": {
+    "instances": [
+      {
+        "importInfo": {
+          "imported": "BasisProvider",
+          "local": "BasisProvider",
+          "moduleName": "basis"
+        },
+        "props": {
+          "theme": "(Identifier)"
+        },
+        "propsSpread": false,
+        "location": {
+          "file": "/path/to/index.js",
+          "start": {
+            "line": 13,
+            "column": 5
+          }
+        }
+      }
+    ]
+  },
+  "Container": {
+    "instances": [
+      {
+        "importInfo": {
+          "imported": "Container",
+          "local": "Container",
+          "moduleName": "basis"
+        },
+        "props": {
+          "margin": "4",
+          "hasBreakpointWidth": null
+        },
+        "propsSpread": false,
+        "location": {
+          "file": "/path/to/index.js",
+          "start": {
+            "line": 14,
+            "column": 7
+          }
+        }
+      }
+    ]
+  },
   "Text": {
     "instances": [
       {
+        "importInfo": {
+          "imported": "Text",
+          "local": "Text",
+          "moduleName": "basis"
+        },
         "props": {
           "textStyle": "subtitle2"
         },
@@ -51,12 +107,17 @@ Running `react-scanner` on it will create the following JSON report:
         "location": {
           "file": "/path/to/index.js",
           "start": {
-            "line": 9,
+            "line": 15,
             "column": 9
           }
         }
       },
       {
+        "importInfo": {
+          "imported": "Text",
+          "local": "Text",
+          "moduleName": "basis"
+        },
         "props": {
           "margin": "4 0 0 0"
         },
@@ -64,7 +125,7 @@ Running `react-scanner` on it will create the following JSON report:
         "location": {
           "file": "/path/to/index.js",
           "start": {
-            "line": 12,
+            "line": 18,
             "column": 9
           }
         }
@@ -74,6 +135,11 @@ Running `react-scanner` on it will create the following JSON report:
   "Link": {
     "instances": [
       {
+        "importInfo": {
+          "imported": "Link",
+          "local": "BasisLink",
+          "moduleName": "basis"
+        },
         "props": {
           "href": "https://github.com/moroshko/react-scanner",
           "newTab": null
@@ -82,26 +148,8 @@ Running `react-scanner` on it will create the following JSON report:
         "location": {
           "file": "/path/to/index.js",
           "start": {
-            "line": 14,
+            "line": 20,
             "column": 11
-          }
-        }
-      }
-    ]
-  },
-  "Container": {
-    "instances": [
-      {
-        "props": {
-          "margin": "4",
-          "hasBreakpointWidth": null
-        },
-        "propsSpread": false,
-        "location": {
-          "file": "/path/to/index.js",
-          "start": {
-            "line": 8,
-            "column": 7
           }
         }
       }
@@ -182,6 +230,7 @@ Here are all the available config options:
 | `components`           | object          | Components to report. Omit to report all components.                                                                                                                                                                              |
 | `includeSubComponents` | boolean         | Whether to report subcomponents or not.<br>When `false`, `Footer` will be reported, but `Footer.Content` will not.<br>When `true`, `Footer.Content` will be reported, as well as `Footer.Content.Legal`, etc.<br>Default: `false` |
 | `importedFrom`         | string or regex | Before reporting a component, we'll check if it's imported from a module name matching `importedFrom` and, only if there is a match, the component will be reported.<br>When omitted, this check is bypassed.                     |
+| `getComponentName`     | function        | This function is called to determine the component name to be used in report based on the `import` declaration.<br>Default: `({ imported, local, moduleName }) => imported || local`                                              |
 | `processors`           | array           | See [Processors](#processors).<br>Default: `["count-components-and-props"]`                                                                                                                                                       |
 
 ## Processors
