@@ -7,6 +7,7 @@ const {
   pluralize,
   forEachComponent,
   sortObjectKeysByValue,
+  getExcludeFn,
 } = require("./utils");
 
 const DEFAULT_GLOBS = ["**/!(*.test|*.spec).@(js|ts)?(x)"];
@@ -16,10 +17,15 @@ async function run({ config, configDir, crawlFrom, startTime }) {
   const globs = config.globs || DEFAULT_GLOBS;
   const files = new fdir()
     .glob(...globs)
-    .exclude(config.exclude)
+    .exclude(getExcludeFn(config.exclude))
     .withFullPaths()
     .crawl(crawlFrom)
     .sync();
+
+  if (files.length === 0) {
+    console.error(`No files found to scan.`);
+    process.exit(1);
+  }
 
   let report = {};
   const {

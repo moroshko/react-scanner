@@ -27,8 +27,21 @@ function validateConfig(config, configDir) {
   }
 
   if (config.exclude !== undefined) {
-    if (typeof config.exclude !== "function") {
-      result.errors.push(`exclude should be a function`);
+    if (Array.isArray(config.exclude)) {
+      for (let i = 0, len = config.exclude.length; i < len; i++) {
+        if (
+          typeof config.exclude[i] !== "string" &&
+          config.exclude[i] instanceof RegExp === false
+        ) {
+          result.errors.push(
+            `every item in the exclude array should be a string or a regex (${typeof config
+              .exclude[i]} found)`
+          );
+          break;
+        }
+      }
+    } else if (typeof config.exclude !== "function") {
+      result.errors.push(`exclude should be an array or a function`);
     }
   }
 
@@ -178,9 +191,35 @@ function sortObjectKeysByValue(obj, mapValue = (value) => value) {
   }, {});
 }
 
+function getExcludeFn(configExclude) {
+  if (Array.isArray(configExclude)) {
+    return (dir) => {
+      for (let i = 0, len = configExclude.length; i < len; i++) {
+        const item = configExclude[i];
+
+        if (
+          (typeof item === "string" && item === dir) ||
+          (item instanceof RegExp && item.test(dir))
+        ) {
+          return true;
+        }
+      }
+
+      return false;
+    };
+  }
+
+  if (typeof configExclude === "function") {
+    return configExclude;
+  }
+
+  return () => false;
+}
+
 module.exports = {
   pluralize,
   validateConfig,
   forEachComponent,
   sortObjectKeysByValue,
+  getExcludeFn,
 };

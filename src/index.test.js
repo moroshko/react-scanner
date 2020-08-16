@@ -191,9 +191,21 @@ Index("invalid config", async () => {
       [
         "Config errors:",
         "- crawlFrom should be a string",
-        "- exclude should be a function",
+        "- exclude should be an array or a function",
       ].join("\n")
     );
+  }
+});
+
+Index("no files found", async () => {
+  try {
+    await execa("./bin/react-scanner", [
+      "-c",
+      "./test/configs/noFilesFound.config.js",
+    ]);
+  } catch ({ exitCode, stderr }) {
+    assert.is(exitCode, 1);
+    assert.is(stderr, "No files found to scan.");
   }
 });
 

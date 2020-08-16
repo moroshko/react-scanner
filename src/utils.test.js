@@ -7,12 +7,14 @@ const {
   pluralize,
   forEachComponent,
   sortObjectKeysByValue,
+  getExcludeFn,
 } = require("./utils");
 
 const ValidateConfig = suite("validateConfig");
 const Pluralize = suite("pluralize");
 const ForEachComponent = suite("forEachComponent");
 const SortObjectKeysByValue = suite("sortObjectKeysByValue");
+const GetExcludeFn = suite("getExcludeFn");
 
 ValidateConfig.before.each((context) => {
   context.originalPathResolve = path.resolve;
@@ -80,7 +82,24 @@ ValidateConfig("crawlFrom path doesn't exist", (context) => {
   });
 });
 
-ValidateConfig("exclude is not a function", () => {
+ValidateConfig("exclude is an array with invalid items", () => {
+  const result = validateConfig(
+    {
+      crawlFrom: "./src",
+      exclude: ["utils", /node_modules/, undefined],
+    },
+    "/Users/misha/oscar"
+  );
+
+  assert.equal(result, {
+    crawlFrom: "/Users/misha/oscar/src",
+    errors: [
+      `every item in the exclude array should be a string or a regex (undefined found)`,
+    ],
+  });
+});
+
+ValidateConfig("exclude is neither an array nor a function", () => {
   const result = validateConfig(
     {
       crawlFrom: "./src",
@@ -91,7 +110,7 @@ ValidateConfig("exclude is not a function", () => {
 
   assert.equal(result, {
     crawlFrom: "/Users/misha/oscar/src",
-    errors: [`exclude should be a function`],
+    errors: [`exclude should be an array or a function`],
   });
 });
 
@@ -302,7 +321,7 @@ ValidateConfig("valid config with all options", () => {
   const result = validateConfig(
     {
       crawlFrom: "./src",
-      exclude: (dir) => dir === "utils",
+      exclude: ["utils"],
       globs: ["**/*.js"],
       components: {
         Button: true,
@@ -446,7 +465,36 @@ SortObjectKeysByValue("custom valueMap", () => {
   });
 });
 
+GetExcludeFn("array of strings", () => {
+  const excludeFn = getExcludeFn(["node_modules", "utils"]);
+
+  assert.is(excludeFn("node_modules"), true);
+  assert.is(excludeFn("utils"), true);
+  assert.is(excludeFn("foo"), false);
+});
+
+GetExcludeFn("array of strings and regexes", () => {
+  const excludeFn = getExcludeFn([/image/i, "utils", /test/]);
+
+  assert.is(excludeFn("Images"), true);
+  assert.is(excludeFn("utils"), true);
+  assert.is(excludeFn("__test__"), true);
+  assert.is(excludeFn("foo"), false);
+});
+
+GetExcludeFn("custom function", () => {
+  const excludeFn = getExcludeFn((dir) => {
+    return dir === "foo" || dir.endsWith("bar") || dir.length === 7;
+  });
+
+  assert.is(excludeFn("foo"), true);
+  assert.is(excludeFn("info-bar"), true);
+  assert.is(excludeFn("1234567"), true);
+  assert.is(excludeFn("something-else"), false);
+});
+
 ValidateConfig.run();
 Pluralize.run();
 ForEachComponent.run();
 SortObjectKeysByValue.run();
+GetExcludeFn.run();
