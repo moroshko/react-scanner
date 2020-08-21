@@ -26,7 +26,7 @@
     "is-plain-object": "4.1.1",
     "picomatch": "2.2.2",
     "sade": "1.7.3",
-    "typescript": "3.9.7"
+    "typescript": "4.0.2"
   },
   "devDependencies": {
     "c8": "7.3.0",
