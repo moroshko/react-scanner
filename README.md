@@ -390,7 +390,7 @@ If the processor function returns a `Promise`, it will be awaited before the nex
 Here is an example of taking the output of the built-in `count-components-and-props` processor and sending it to your storage solution.
 
 ```
-reporters: [
+processors: [
   "count-components-and-props",
   ({ prevResult }) => {
     return axios.post("/my/storage/solution", prevResult);
