@@ -33,7 +33,7 @@
     "eslint": "7.17.0",
     "eslint-plugin-import": "2.22.1",
     "execa": "4.1.0",
-    "husky": "4.3.6",
+    "husky": "4.3.7",
     "prettier": "2.2.1",
     "uvu": "0.5.1",
     "watchlist": "0.2.3"
