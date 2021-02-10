@@ -117,6 +117,7 @@ function scan({
               ...(imported !== null && { imported }),
               local,
               moduleName,
+              importType: specifiers[i].type,
             };
             break;
           }
