@@ -1,6 +1,6 @@
 {
   "name": "react-scanner",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Extract React components and props usage from code.",
   "bin": "bin/react-scanner",
   "scripts": {
