@@ -660,6 +660,45 @@ Scan("importedFrom default export", ({ getReport }) => {
   });
 });
 
+Scan("importedFrom default export as", ({ getReport }) => {
+  const report = getReport(
+    "imported-from-default-export.js",
+    `
+    import { default as Header } from "my-design-system";
+    import Box from "other-module";
+    
+    <Box>
+      <Header />
+    </Box>
+  `,
+    { importedFrom: /my-design-system/ }
+  );
+
+  assert.equal(report, {
+    Header: {
+      instances: [
+        {
+          importInfo: {
+            imported: "default",
+            local: "Header",
+            moduleName: "my-design-system",
+            importType: "ImportSpecifier",
+          },
+          props: {},
+          propsSpread: false,
+          location: {
+            file: "imported-from-default-export.js",
+            start: {
+              line: 6,
+              column: 7,
+            },
+          },
+        },
+      ],
+    },
+  });
+});
+
 Scan("importedFrom named export", ({ getReport }) => {
   const report = getReport(
     "imported-from-named-export.js",
