@@ -83,7 +83,7 @@ function scan({
   components,
   includeSubComponents = false,
   importedFrom,
-  getComponentName = ({ imported, local }) => imported || local,
+  getComponentName = ({ imported, local }) => imported === "default" ? local : imported || local,
   report,
 }) {
   let ast;
