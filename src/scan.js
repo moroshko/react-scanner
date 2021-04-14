@@ -1,7 +1,7 @@
 const { parse } = require("@typescript-eslint/typescript-estree");
 const astray = require("astray");
 const getObjectPath = require("dlv");
-const setObjectPath = require("dset");
+const { dset } = require("dset");
 
 const parseOptions = {
   loc: true,
@@ -83,7 +83,8 @@ function scan({
   components,
   includeSubComponents = false,
   importedFrom,
-  getComponentName = ({ imported, local }) => imported === "default" ? local : imported || local,
+  getComponentName = ({ imported, local }) =>
+    imported === "default" ? local : imported || local,
   report,
 }) {
   let ast;
@@ -194,7 +195,7 @@ function scan({
 
       if (!componentInfo) {
         componentInfo = {};
-        setObjectPath(report, componentPath, componentInfo);
+        dset(report, componentPath, componentInfo);
       }
 
       if (!componentInfo.instances) {

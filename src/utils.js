@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const isPlainObject = require("is-plain-object");
+const { isPlainObject } = require("is-plain-object");
 const processors = require("./processors/processors");
 
 function pluralize(count, word) {

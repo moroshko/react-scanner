@@ -4,6 +4,7 @@
   "description": "Extract React components and props usage from code.",
   "bin": "bin/react-scanner",
   "scripts": {
+    "prepare": "husky install",
     "build": "node scripts/processors.js",
     "lint": "eslint --max-warnings 0 \"**/*.js\"",
     "prettier": "prettier --write \"**/*.{js,json,md}\"",
@@ -12,18 +13,13 @@
     "test:coverage": "c8 --include=src/**/*.js -o coverage --check-coverage --branches 100 --functions 100 --lines 100 --statements 100 npm t",
     "prepublishOnly": "npm run build"
   },
-  "husky": {
-    "hooks": {
-      "pre-commit": "npm run build && npm run prettier && npm run lint && npm run test:coverage && git add src/processors/processors.json"
-    }
-  },
   "dependencies": {
-    "@typescript-eslint/typescript-estree": "3.10.1",
+    "@typescript-eslint/typescript-estree": "4.22.0",
     "astray": "1.1.1",
     "dlv": "1.1.3",
-    "dset": "2.1.0",
-    "fdir": "4.1.0",
-    "is-plain-object": "4.1.1",
+    "dset": "3.1.0",
+    "fdir": "5.0.0",
+    "is-plain-object": "5.0.0",
     "picomatch": "2.2.3",
     "sade": "1.7.4",
     "typescript": "4.2.4"
@@ -32,8 +28,8 @@
     "c8": "7.7.1",
     "eslint": "7.24.0",
     "eslint-plugin-import": "2.22.1",
-    "execa": "4.1.0",
-    "husky": "4.3.8",
+    "execa": "5.0.0",
+    "husky": "6.0.0",
     "prettier": "2.2.1",
     "uvu": "0.5.1",
     "watchlist": "0.2.3"
@@ -47,7 +43,7 @@
     "src/**/!(*.test).@(js|json)"
   ],
   "engines": {
-    "node": ">=10.12.0"
+    "node": ">=12.18.2"
   },
   "keywords": [
     "react",

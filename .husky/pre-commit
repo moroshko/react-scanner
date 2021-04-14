@@ -1,0 +1,4 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+npm run build && npm run prettier && npm run lint && npm run test:coverage && git add src/processors/processors.json
