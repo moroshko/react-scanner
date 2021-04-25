@@ -8,7 +8,13 @@ Scan.before((context) => {
   context.getReport = (
     filePath,
     code,
-    { components, includeSubComponents, importedFrom, getComponentName } = {}
+    {
+      components,
+      includeSubComponents,
+      importedFrom,
+      getComponentName,
+      getPropValue,
+    } = {}
   ) => {
     const report = {};
 
@@ -24,6 +30,7 @@ Scan.before((context) => {
       ...(includeSubComponents !== undefined && { includeSubComponents }),
       ...(importedFrom !== undefined && { importedFrom }),
       ...(getComponentName !== undefined && { getComponentName }),
+      ...(getPropValue !== undefined && { getPropValue }),
       report,
     });
 
@@ -185,6 +192,39 @@ Scan("props with other values", ({ getReport }) => {
           props: {
             foo: "(Identifier)",
             style: "(ObjectExpression)",
+          },
+          propsSpread: false,
+          location: {
+            file: "props-with-other-values.js",
+            start: {
+              line: 1,
+              column: 1,
+            },
+          },
+        },
+      ],
+    },
+  });
+});
+
+Scan("props with custom value formatter", ({ getReport }) => {
+  const report = getReport(
+    "props-with-other-values.js",
+    `<Text foo={bar} style={{object}}>Hello</Text>`,
+    {
+      getPropValue: () => {
+        return "custom value";
+      },
+    }
+  );
+
+  assert.equal(report, {
+    Text: {
+      instances: [
+        {
+          props: {
+            foo: "custom value",
+            style: "custom value",
           },
           propsSpread: false,
           location: {
