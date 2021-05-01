@@ -231,8 +231,7 @@ Here are all the available config options:
 | `includeSubComponents` | boolean           | Whether to report subcomponents or not.<br>When `false`, `Footer` will be reported, but `Footer.Content` will not.<br>When `true`, `Footer.Content` will be reported, as well as `Footer.Content.Legal`, etc.<br>Default: `false`                                                                                                                    |
 | `importedFrom`         | string or regex   | Before reporting a component, we'll check if it's imported from a module name matching `importedFrom` and, only if there is a match, the component will be reported.<br>When omitted, this check is bypassed.                                                                                                                                        |
 | `getComponentName`     | function          | This function is called to determine the component name to be used in the report based on the `import` declaration.<br>Default: `({ imported, local, moduleName, importType }) => imported \|\| local`                                                                                                                                               |
-| `getPropValue`         | function          | Customize reporting for non-trivial prop values                                                                                                                                                                                                                                                                                                      |
-|                        |
+| `getPropValue`         | function          | Customize reporting for non-trivial prop values. See [Customizing prop values treatment](#customizing-prop-values-treatment)                                                                                                                                                                                                                         |
 | `processors`           | array             | See [Processors](#processors).<br>Default: `["count-components-and-props"]`                                                                                                                                                                                                                                                                          |
 
 ## Processors
@@ -410,6 +409,46 @@ Processor functions receive an object with the following keys in it:
 | `forEachComponent`      | function | Helper function to recursively traverse the raw JSON report. The function you pass in is called for every component in the report, and it gets an object with `componentName` and `component` in it. Check the implementation of `count-components-and-props` for a usage example.                             |
 | `sortObjectKeysByValue` | function | Helper function that sorts object keys by some function of the value. Check the implementation of `count-components-and-props` for a usage example.                                                                                                                                                            |
 | `output`                | function | Helper function that outputs the given data. Its first parameter is the data you want to output. The second parameter is the destination. When the second parameter is omitted, it outputs to the console. To output to the file system, pass an absolute path or a relative path to the config file location. |
+
+## Customizing prop values treatment
+
+When a primitive (strings, numbers, booleans, etc...) is passed as a prop value into a component, the raw report will display this literal value. However, when expressions or variables are passed as a prop value into a component, the raw report will display the AST type. In some instances, we may want to see the actual expression that was passed in.
+
+### getPropValue
+
+Using the `getPropValue` configuration parameter makes this possible.
+
+```typescript
+type IGetPropValue = {
+    /** The AST node */
+    node: Node,
+    componentName: string,
+    propName: string,
+    /** Pass the node back into this method for default handling of the prop value */
+    defaultGetPropValue: (node: Node) => string
+}
+getPropValue({ node, componentName, propName, defaultGetPropValue }: IGetPropValue): string
+```
+
+### Example
+
+If we were building out a design system, and wanted to see all the variations of a `style` prop that we passed into an `Input` component, we could do something like this:
+
+```javascript
+const escodegen = require("escodegen-wallaby");
+
+getPropValue: ({ node, propName, componentName, defaultGetPropValue }) => {
+  if (componentName === "Input" && propName === "style") {
+    if (node.type === "JSXExpressionContainer") {
+      return escodegen.generate(node.expression);
+    } else {
+      return escodegen.generate(node);
+    }
+  } else {
+    return defaultGetPropValue(node);
+  }
+};
+```
 
 ## License
 

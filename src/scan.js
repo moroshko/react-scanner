@@ -53,6 +53,7 @@ function getInstanceInfo({
   filePath,
   importInfo,
   getPropValue: customGetPropValue,
+  componentName,
 }) {
   const { attributes } = node;
   const result = {
@@ -72,7 +73,12 @@ function getInstanceInfo({
       const { name, value } = attribute;
       const propName = name.name;
       const propValue = customGetPropValue
-        ? customGetPropValue(value)
+        ? customGetPropValue({
+            node: value,
+            propName,
+            componentName,
+            defaultGetPropValue: getPropValue,
+          })
         : getPropValue(value);
 
       result.props[propName] = propValue;
@@ -196,9 +202,10 @@ function scan({
         return astray.SKIP;
       }
 
-      const componentPath = [actualFirstPart, ...restParts].join(
-        ".components."
-      );
+      const componentParts = [actualFirstPart, ...restParts];
+
+      const componentPath = componentParts.join(".components.");
+      const componentName = componentParts.join(".");
       let componentInfo = getObjectPath(report, componentPath);
 
       if (!componentInfo) {
@@ -215,6 +222,7 @@ function scan({
         filePath,
         importInfo: importsMap[firstPart],
         getPropValue,
+        componentName,
       });
 
       componentInfo.instances.push(info);

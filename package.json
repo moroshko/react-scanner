@@ -26,6 +26,7 @@
   },
   "devDependencies": {
     "c8": "7.7.1",
+    "escodegen-wallaby": "1.6.32",
     "eslint": "7.25.0",
     "eslint-plugin-import": "2.22.1",
     "execa": "5.0.0",

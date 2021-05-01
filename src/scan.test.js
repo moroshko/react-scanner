@@ -1,4 +1,5 @@
 const { suite } = require("uvu");
+const escodegen = require("escodegen-wallaby");
 const assert = require("uvu/assert");
 const scan = require("./scan");
 
@@ -25,6 +26,7 @@ Scan.before((context) => {
         Box: true,
         Header: true,
         Text: true,
+        Input: true,
       },
       ...(components !== undefined && { components }),
       ...(includeSubComponents !== undefined && { includeSubComponents }),
@@ -209,29 +211,59 @@ Scan("props with other values", ({ getReport }) => {
 
 Scan("props with custom value formatter", ({ getReport }) => {
   const report = getReport(
-    "props-with-other-values.js",
-    `<Text foo={bar} style={{object}}>Hello</Text>`,
+    "props-with-custom-value-formatter.js",
+    `<>
+        <Input style={{ fontSize: '10px' }} onClick={e => e.preventDefault}/>
+        <Input style={{ padding: '10px' }} value={someVariable} />
+    </>`,
     {
-      getPropValue: () => {
-        return "custom value";
+      getPropValue: ({
+        node,
+        propName,
+        componentName,
+        defaultGetPropValue,
+      }) => {
+        if (componentName === "Input" && propName === "style") {
+          if (node.type === "JSXExpressionContainer") {
+            return escodegen.generate(node.expression);
+          } else {
+            return escodegen.generate(node);
+          }
+        } else {
+          return defaultGetPropValue(node);
+        }
       },
     }
   );
 
   assert.equal(report, {
-    Text: {
+    Input: {
       instances: [
         {
           props: {
-            foo: "custom value",
-            style: "custom value",
+            style: "{ fontSize: '10px' }",
+            onClick: "(ArrowFunctionExpression)",
           },
           propsSpread: false,
           location: {
-            file: "props-with-other-values.js",
+            file: "props-with-custom-value-formatter.js",
             start: {
-              line: 1,
-              column: 1,
+              line: 2,
+              column: 9,
+            },
+          },
+        },
+        {
+          props: {
+            style: "{ padding: '10px' }",
+            value: "(Identifier)",
+          },
+          propsSpread: false,
+          location: {
+            file: "props-with-custom-value-formatter.js",
+            start: {
+              line: 3,
+              column: 9,
             },
           },
         },
