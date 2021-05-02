@@ -213,7 +213,7 @@ Scan("props with custom value formatter", ({ getReport }) => {
   const report = getReport(
     "props-with-custom-value-formatter.js",
     `<>
-        <Input style={{ fontSize: '10px' }} onClick={e => e.preventDefault}/>
+        <Input style={{ fontSize: '10px' }} onClick={e => e.preventDefault()}/>
         <Input style={{ padding: '10px' }} value={someVariable} />
     </>`,
     {
