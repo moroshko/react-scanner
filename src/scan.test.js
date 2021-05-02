@@ -1,4 +1,5 @@
 const { suite } = require("uvu");
+const escodegen = require("escodegen-wallaby");
 const assert = require("uvu/assert");
 const scan = require("./scan");
 
@@ -8,7 +9,13 @@ Scan.before((context) => {
   context.getReport = (
     filePath,
     code,
-    { components, includeSubComponents, importedFrom, getComponentName } = {}
+    {
+      components,
+      includeSubComponents,
+      importedFrom,
+      getComponentName,
+      getPropValue,
+    } = {}
   ) => {
     const report = {};
 
@@ -19,11 +26,13 @@ Scan.before((context) => {
         Box: true,
         Header: true,
         Text: true,
+        Input: true,
       },
       ...(components !== undefined && { components }),
       ...(includeSubComponents !== undefined && { includeSubComponents }),
       ...(importedFrom !== undefined && { importedFrom }),
       ...(getComponentName !== undefined && { getComponentName }),
+      ...(getPropValue !== undefined && { getPropValue }),
       report,
     });
 
@@ -192,6 +201,69 @@ Scan("props with other values", ({ getReport }) => {
             start: {
               line: 1,
               column: 1,
+            },
+          },
+        },
+      ],
+    },
+  });
+});
+
+Scan("props with custom value formatter", ({ getReport }) => {
+  const report = getReport(
+    "props-with-custom-value-formatter.js",
+    `<>
+        <Input style={{ fontSize: '10px' }} onClick={e => e.preventDefault()}/>
+        <Input style={{ padding: '10px' }} value={someVariable} />
+    </>`,
+    {
+      getPropValue: ({
+        node,
+        propName,
+        componentName,
+        defaultGetPropValue,
+      }) => {
+        if (componentName === "Input" && propName === "style") {
+          if (node.type === "JSXExpressionContainer") {
+            return escodegen.generate(node.expression);
+          } else {
+            return escodegen.generate(node);
+          }
+        } else {
+          return defaultGetPropValue(node);
+        }
+      },
+    }
+  );
+
+  assert.equal(report, {
+    Input: {
+      instances: [
+        {
+          props: {
+            style: "{ fontSize: '10px' }",
+            onClick: "(ArrowFunctionExpression)",
+          },
+          propsSpread: false,
+          location: {
+            file: "props-with-custom-value-formatter.js",
+            start: {
+              line: 2,
+              column: 9,
+            },
+          },
+        },
+        {
+          props: {
+            style: "{ padding: '10px' }",
+            value: "(Identifier)",
+          },
+          propsSpread: false,
+          location: {
+            file: "props-with-custom-value-formatter.js",
+            start: {
+              line: 3,
+              column: 9,
             },
           },
         },

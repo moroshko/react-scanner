@@ -33,6 +33,7 @@ async function run({ config, configDir, crawlFrom, startTime }) {
     includeSubComponents,
     importedFrom,
     getComponentName,
+    getPropValue,
   } = config;
 
   for (let i = 0, len = files.length; i < len; i++) {
@@ -47,6 +48,7 @@ async function run({ config, configDir, crawlFrom, startTime }) {
       importedFrom,
       getComponentName,
       report,
+      getPropValue,
     });
   }
 

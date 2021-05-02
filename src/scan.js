@@ -48,7 +48,13 @@ function getPropValue(node) {
   throw new Error(`Unknown node type: ${node.type}`);
 }
 
-function getInstanceInfo({ node, filePath, importInfo }) {
+function getInstanceInfo({
+  node,
+  filePath,
+  importInfo,
+  getPropValue: customGetPropValue,
+  componentName,
+}) {
   const { attributes } = node;
   const result = {
     ...(importInfo !== undefined && { importInfo }),
@@ -66,7 +72,14 @@ function getInstanceInfo({ node, filePath, importInfo }) {
     if (attribute.type === "JSXAttribute") {
       const { name, value } = attribute;
       const propName = name.name;
-      const propValue = getPropValue(value);
+      const propValue = customGetPropValue
+        ? customGetPropValue({
+            node: value,
+            propName,
+            componentName,
+            defaultGetPropValue: getPropValue,
+          })
+        : getPropValue(value);
 
       result.props[propName] = propValue;
     } else if (attribute.type === "JSXSpreadAttribute") {
@@ -86,6 +99,7 @@ function scan({
   getComponentName = ({ imported, local }) =>
     imported === "default" ? local : imported || local,
   report,
+  getPropValue,
 }) {
   let ast;
 
@@ -188,9 +202,10 @@ function scan({
         return astray.SKIP;
       }
 
-      const componentPath = [actualFirstPart, ...restParts].join(
-        ".components."
-      );
+      const componentParts = [actualFirstPart, ...restParts];
+
+      const componentPath = componentParts.join(".components.");
+      const componentName = componentParts.join(".");
       let componentInfo = getObjectPath(report, componentPath);
 
       if (!componentInfo) {
@@ -206,6 +221,8 @@ function scan({
         node,
         filePath,
         importInfo: importsMap[firstPart],
+        getPropValue,
+        componentName,
       });
 
       componentInfo.instances.push(info);
