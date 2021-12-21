@@ -44,7 +44,7 @@
     "src/**/!(*.test).@(js|json)"
   ],
   "engines": {
-    "node": "14.x"
+    "node": ">=14.x"
   },
   "keywords": [
     "react",
