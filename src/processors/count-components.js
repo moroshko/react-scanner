@@ -1,23 +1,21 @@
-const countComponentsProcessor = (options) => ({
-  forEachComponent,
-  sortObjectKeysByValue,
-  output,
-}) => {
-  let result = {};
+const countComponentsProcessor =
+  (options) =>
+  ({ forEachComponent, sortObjectKeysByValue, output }) => {
+    let result = {};
 
-  forEachComponent(({ componentName, component }) => {
-    const { instances } = component;
+    forEachComponent(({ componentName, component }) => {
+      const { instances } = component;
 
-    if (instances) {
-      result[componentName] = instances.length;
-    }
-  });
+      if (instances) {
+        result[componentName] = instances.length;
+      }
+    });
 
-  result = sortObjectKeysByValue(result);
+    result = sortObjectKeysByValue(result);
 
-  output(result, options && options.outputTo);
+    output(result, options && options.outputTo);
 
-  return result;
-};
+    return result;
+  };
 
 module.exports = countComponentsProcessor;
