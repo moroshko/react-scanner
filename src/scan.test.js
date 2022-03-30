@@ -880,8 +880,7 @@ Scan(
                     props: {},
                     propsSpread: false,
                     location: {
-                      file:
-                        "imported-from-named-export-with-alias-sub-component.js",
+                      file: "imported-from-named-export-with-alias-sub-component.js",
                       start: {
                         line: 5,
                         column: 7,

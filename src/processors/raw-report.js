@@ -1,7 +1,9 @@
-const rawReportProcessor = (options) => ({ report, output }) => {
-  output(report, options && options.outputTo);
+const rawReportProcessor =
+  (options) =>
+  ({ report, output }) => {
+    output(report, options && options.outputTo);
 
-  return report;
-};
+    return report;
+  };
 
 module.exports = rawReportProcessor;
