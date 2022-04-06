@@ -146,86 +146,88 @@ function scan({
         }
       }
     },
-    JSXOpeningElement(node) {
-      const name = getComponentNameFromAST(node.name);
-      const nameParts = name.split(".");
-      const [firstPart, ...restParts] = nameParts;
-      const actualFirstPart = importsMap[firstPart]
-        ? getComponentName(importsMap[firstPart])
-        : firstPart;
-      const shouldReportComponent = () => {
-        if (components) {
-          if (nameParts.length === 1) {
-            if (components[actualFirstPart] === undefined) {
+    JSXOpeningElement: {
+      exit(node) {
+        const name = getComponentNameFromAST(node.name);
+        const nameParts = name.split(".");
+        const [firstPart, ...restParts] = nameParts;
+        const actualFirstPart = importsMap[firstPart]
+          ? getComponentName(importsMap[firstPart])
+          : firstPart;
+        const shouldReportComponent = () => {
+          if (components) {
+            if (nameParts.length === 1) {
+              if (components[actualFirstPart] === undefined) {
+                return false;
+              }
+            } else {
+              const actualComponentName = [actualFirstPart, ...restParts].join(
+                "."
+              );
+
+              if (
+                components[actualFirstPart] === undefined &&
+                components[actualComponentName] === undefined
+              ) {
+                return false;
+              }
+            }
+          }
+
+          if (includeSubComponents === false) {
+            if (nameParts.length > 1) {
               return false;
             }
-          } else {
-            const actualComponentName = [actualFirstPart, ...restParts].join(
-              "."
-            );
+          }
 
-            if (
-              components[actualFirstPart] === undefined &&
-              components[actualComponentName] === undefined
-            ) {
+          if (importedFrom) {
+            if (!importsMap[firstPart]) {
+              return false;
+            }
+
+            const actualImportedFrom = importsMap[firstPart].moduleName;
+
+            if (importedFrom instanceof RegExp) {
+              if (importedFrom.test(actualImportedFrom) === false) {
+                return false;
+              }
+            } else if (actualImportedFrom !== importedFrom) {
               return false;
             }
           }
+
+          return true;
+        };
+
+        if (!shouldReportComponent()) {
+          return astray.SKIP;
         }
 
-        if (includeSubComponents === false) {
-          if (nameParts.length > 1) {
-            return false;
-          }
+        const componentParts = [actualFirstPart, ...restParts];
+
+        const componentPath = componentParts.join(".components.");
+        const componentName = componentParts.join(".");
+        let componentInfo = getObjectPath(report, componentPath);
+
+        if (!componentInfo) {
+          componentInfo = {};
+          dset(report, componentPath, componentInfo);
         }
 
-        if (importedFrom) {
-          if (!importsMap[firstPart]) {
-            return false;
-          }
-
-          const actualImportedFrom = importsMap[firstPart].moduleName;
-
-          if (importedFrom instanceof RegExp) {
-            if (importedFrom.test(actualImportedFrom) === false) {
-              return false;
-            }
-          } else if (actualImportedFrom !== importedFrom) {
-            return false;
-          }
+        if (!componentInfo.instances) {
+          componentInfo.instances = [];
         }
 
-        return true;
-      };
+        const info = getInstanceInfo({
+          node,
+          filePath,
+          importInfo: importsMap[firstPart],
+          getPropValue,
+          componentName,
+        });
 
-      if (!shouldReportComponent()) {
-        return astray.SKIP;
-      }
-
-      const componentParts = [actualFirstPart, ...restParts];
-
-      const componentPath = componentParts.join(".components.");
-      const componentName = componentParts.join(".");
-      let componentInfo = getObjectPath(report, componentPath);
-
-      if (!componentInfo) {
-        componentInfo = {};
-        dset(report, componentPath, componentInfo);
-      }
-
-      if (!componentInfo.instances) {
-        componentInfo.instances = [];
-      }
-
-      const info = getInstanceInfo({
-        node,
-        filePath,
-        importInfo: importsMap[firstPart],
-        getPropValue,
-        componentName,
-      });
-
-      componentInfo.instances.push(info);
+        componentInfo.instances.push(info);
+      },
     },
   });
 }
