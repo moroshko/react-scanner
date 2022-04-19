@@ -685,7 +685,7 @@ Scan("not importedFrom", ({ getReport }) => {
     "not-imported-from.js",
     `
     import Header from "other-design-system";
-    
+
     <Header />
   `,
     { importedFrom: "my-design-system" }
@@ -700,7 +700,7 @@ Scan("importedFrom default export", ({ getReport }) => {
     `
     import Header from "my-design-system";
     import Box from "other-module";
-    
+
     <Box>
       <Header />
     </Box>
@@ -738,7 +738,7 @@ Scan("importedFrom default export as", ({ getReport }) => {
     `
     import { default as Header } from "my-design-system";
     import Box from "other-module";
-    
+
     <Box>
       <Header />
     </Box>
@@ -776,7 +776,7 @@ Scan("importedFrom named export", ({ getReport }) => {
     "imported-from-named-export.js",
     `
     import { Header } from "basis";
-    
+
     <Header />
   `,
     { importedFrom: "basis" }
@@ -807,12 +807,51 @@ Scan("importedFrom named export", ({ getReport }) => {
   });
 });
 
+Scan("props with jsx expressions", ({ getReport }) => {
+  const report = getReport(
+    "imported-from-in-prop-jsx.js",
+
+    `
+    import { Text } from "other-place";
+    import { Box } from "basis";
+
+    <Text foo={<Box foo={bar} />} />`,
+    { importedFrom: "basis" }
+  );
+
+  assert.equal(report, {
+    Box: {
+      instances: [
+        {
+          props: {
+            foo: "(Identifier)",
+          },
+          propsSpread: false,
+          location: {
+            file: "imported-from-in-prop-jsx.js",
+            start: {
+              line: 5,
+              column: 16,
+            },
+          },
+          importInfo: {
+            imported: "Box",
+            local: "Box",
+            moduleName: "basis",
+            importType: "ImportSpecifier",
+          },
+        },
+      ],
+    },
+  });
+});
+
 Scan("importedFrom named export with alias", ({ getReport }) => {
   const report = getReport(
     "imported-from-named-export-with-alias.js",
     `
     import { Header as MyHeader } from "basis";
-    
+
     <MyHeader />
   `,
     { importedFrom: "basis" }
@@ -850,7 +889,7 @@ Scan(
       "imported-from-named-export-with-alias-sub-component.js",
       `
     import { Header as MyHeader } from "basis";
-    
+
     <>
       <MyHeader.Foo.Bar />
       <Header.Legal.Section />
@@ -902,7 +941,7 @@ Scan("importedFrom entire module", ({ getReport }) => {
     "imported-from-entire-module.js",
     `
     import * as Basis from "basis";
-    
+
     <Basis.Header />
   `,
     {
@@ -948,7 +987,7 @@ Scan("custom getComponentName", ({ getReport }) => {
     `
     import MyBox from "@my/design-system/Box";
     import { ImportedText as LocalText } from "@my/design-system/Text";
-    
+
     <>
       <MyBox />
       <LocalText />
@@ -1016,7 +1055,7 @@ Scan("importAlias", ({ getReport }) => {
     import { Text as AliasedText } from "basis";
     import { Text as AnotherAliasedText } from "basis";
     import "./styles.css";
-    
+
     <>
       <Text />
       <AliasedText />
