@@ -1,9 +1,6 @@
-const startTime = process.hrtime.bigint();
-
 const path = require("path");
 const sade = require("sade");
-const { validateConfig } = require("./utils");
-const run = require("./run");
+const { run } = require("./scanner");
 const packageJson = require("../package.json");
 
 sade("react-scanner", true)
@@ -15,23 +12,6 @@ sade("react-scanner", true)
     const configPath = path.resolve(process.cwd(), options.config);
     const configDir = path.dirname(configPath);
     const config = require(configPath);
-    const { crawlFrom, errors } = validateConfig(config, configDir);
-
-    if (errors.length === 0) {
-      run({
-        config,
-        configDir,
-        crawlFrom,
-        startTime,
-      });
-    } else {
-      console.error(`Config errors:`);
-
-      errors.forEach((error) => {
-        console.error(`- ${error}`);
-      });
-
-      process.exit(1);
-    }
+    run(config, configDir);
   })
   .parse(process.argv);

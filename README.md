@@ -44,7 +44,7 @@ Running `react-scanner` on it will create the following JSON report:
 
 <details>
   <summary>Click to see it</summary>
-  
+
 ```json
 {
   "BasisProvider": {
@@ -157,6 +157,7 @@ Running `react-scanner` on it will create the following JSON report:
   }
 }
 ```
+
 </details>
 
 This raw JSON report is used then to generate something that is useful to you. For example, you might want to know:
@@ -179,7 +180,7 @@ npm install --save-dev react-scanner
 npx react-scanner -c /path/to/react-scanner.config.js
 ```
 
-## Config file
+### Config file
 
 Everything that `react-scanner` does is controlled by a config file.
 
@@ -220,10 +221,23 @@ Running `react-scanner` with this config would output something like this to the
 }
 ```
 
+### Running programmatically
+
+It is also possible to run the scanner programmatically. In this case, the config options should be passed directly to the `run` function.
+
+```js
+import scanner from "react-scanner";
+
+await scanner.run(config);
+```
+
+## Config options
+
 Here are all the available config options:
 
 | Option                 | Type              | Description                                                                                                                                                                                                                                                                                                                                          |
 | ---------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `rootDir`              | string            | The path to the root directory of your project. <br>If using a config file, this defaults to the config directory.                                                                                                                                                                                                                                   |
 | `crawlFrom`            | string            | The path of the directory to start crawling from.<br>Absolute or relative to the config file location.                                                                                                                                                                                                                                               |
 | `exclude`              | array or function | Each array item should be a string or a regex. When crawling, if directory name matches exactly the string item or matches the regex item, it will be excluded from crawling.<br>For more complex scenarios, `exclude` can be a a function that accepts a directory name and should return `true` if the directory should be excluded from crawling. |
 | `globs`                | array             | Only files matching these globs will be scanned. See [here](https://github.com/micromatch/picomatch#globbing-features) for glob syntax.<br>Default: `["**/!(*.test\|*.spec).@(js\|ts)?(x)"]`                                                                                                                                                         |
@@ -258,9 +272,9 @@ processors: [
 
 All the built-in processors support the following options:
 
-| Option     | Type   | Description                                                                                                                                 |
-| ---------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `outputTo` | string | Where to output the result.<br>Absolute or relative to the config file location.<br>When omitted, the result is printed out to the console. |
+| Option     | Type   | Description                                                                                                                           |
+| ---------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `outputTo` | string | Where to output the result.<br>Absolute or relative to the root directory.<br>When omitted, the result is printed out to the console. |
 
 Here are the built-in processors that `react-scanner` comes with:
 

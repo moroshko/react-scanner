@@ -14,6 +14,7 @@ const DEFAULT_GLOBS = ["**/!(*.test|*.spec).@(js|ts)?(x)"];
 const DEFAULT_PROCESSORS = ["count-components-and-props"];
 
 async function run({ config, configDir, crawlFrom, startTime }) {
+  const rootDir = config.rootDir || configDir;
   const globs = config.globs || DEFAULT_GLOBS;
   const files = new fdir()
     .glob(...globs)
@@ -75,7 +76,7 @@ async function run({ config, configDir, crawlFrom, startTime }) {
       // eslint-disable-next-line no-console
       console.log(dataStr);
     } else {
-      const filePath = path.resolve(configDir, destination);
+      const filePath = path.resolve(rootDir, destination);
 
       fs.mkdirSync(path.dirname(filePath), { recursive: true });
       fs.writeFileSync(filePath, dataStr);

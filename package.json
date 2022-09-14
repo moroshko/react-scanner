@@ -3,6 +3,7 @@
   "version": "1.0.3",
   "description": "Extract React components and props usage from code.",
   "bin": "bin/react-scanner",
+  "main": "src/scanner.js",
   "scripts": {
     "prepare": "husky install",
     "build": "node scripts/processors.js",
