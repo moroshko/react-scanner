@@ -25,14 +25,14 @@
     "typescript": "4.6.3"
   },
   "devDependencies": {
-    "c8": "7.11.0",
-    "escodegen-wallaby": "1.6.34",
-    "eslint": "8.13.0",
+    "c8": "7.12.0",
+    "escodegen-wallaby": "1.6.35",
+    "eslint": "8.23.1",
     "eslint-plugin-import": "2.26.0",
     "execa": "5.0.0",
     "husky": "7.0.4",
-    "prettier": "2.6.2",
-    "uvu": "0.5.3",
+    "prettier": "2.7.1",
+    "uvu": "0.5.6",
     "watchlist": "0.3.1"
   },
   "repository": {
