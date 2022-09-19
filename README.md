@@ -228,7 +228,7 @@ It is also possible to run the scanner programmatically. In this case, the confi
 ```js
 import scanner from "react-scanner";
 
-await scanner.run(config);
+const output = await scanner.run(config);
 ```
 
 ## Config options

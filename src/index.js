@@ -12,6 +12,6 @@ sade("react-scanner", true)
     const configPath = path.resolve(process.cwd(), options.config);
     const configDir = path.dirname(configPath);
     const config = require(configPath);
-    run(config, configDir);
+    run(config, configDir, "cli");
   })
   .parse(process.argv);

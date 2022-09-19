@@ -4,15 +4,16 @@ const { validateConfig } = require("./utils");
 const runScan = require("./run");
 
 const scanner = {
-  run: async function run(config, configDir) {
+  run: async function run(config, configDir, method = "programmatic") {
     const { crawlFrom, errors } = validateConfig(config, configDir);
 
     if (errors.length === 0) {
-      await runScan({
+      return await runScan({
         config,
         configDir,
         crawlFrom,
         startTime,
+        method: method,
       });
     } else {
       console.error(`Config errors:`);
