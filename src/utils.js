@@ -17,7 +17,10 @@ function validateConfig(config, configDir) {
   } else if (typeof config.crawlFrom !== "string") {
     result.errors.push(`crawlFrom should be a string`);
   } else {
-    const crawlFrom = path.resolve(configDir, config.crawlFrom);
+    const crawlFrom = path.resolve(
+      config.rootDir || configDir,
+      config.crawlFrom
+    );
 
     if (fs.existsSync(crawlFrom)) {
       result.crawlFrom = crawlFrom;

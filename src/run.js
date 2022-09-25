@@ -13,7 +13,14 @@ const {
 const DEFAULT_GLOBS = ["**/!(*.test|*.spec).@(js|ts)?(x)"];
 const DEFAULT_PROCESSORS = ["count-components-and-props"];
 
-async function run({ config, configDir, crawlFrom, startTime }) {
+async function run({
+  config,
+  configDir,
+  crawlFrom,
+  startTime,
+  method = "cli",
+}) {
+  const rootDir = config.rootDir || configDir;
   const globs = config.globs || DEFAULT_GLOBS;
   const files = new fdir()
     .glob(...globs)
@@ -66,19 +73,28 @@ async function run({ config, configDir, crawlFrom, startTime }) {
       ? config.processors
       : DEFAULT_PROCESSORS;
   const prevResults = [];
-  const output = (data, destination = "stdout") => {
+  const output = (data, destination) => {
+    const defaultDestination = method === "cli" ? "stdout" : "return";
+    const dest = destination || defaultDestination;
     const dataStr = isPlainObject(data)
       ? JSON.stringify(data, null, 2)
       : String(data);
 
-    if (destination === "stdout") {
-      // eslint-disable-next-line no-console
-      console.log(dataStr);
-    } else {
-      const filePath = path.resolve(configDir, destination);
+    switch (dest) {
+      case "stdout": {
+        // eslint-disable-next-line no-console
+        console.log(dataStr);
+        break;
+      }
+      case "return": {
+        break;
+      }
+      default: {
+        const filePath = path.resolve(rootDir, destination);
 
-      fs.mkdirSync(path.dirname(filePath), { recursive: true });
-      fs.writeFileSync(filePath, dataStr);
+        fs.mkdirSync(path.dirname(filePath), { recursive: true });
+        fs.writeFileSync(filePath, dataStr);
+      }
     }
   };
 
@@ -104,6 +120,8 @@ async function run({ config, configDir, crawlFrom, startTime }) {
 
     prevResults.push(result);
   }
+
+  return prevResults[prevResults.length - 1];
 }
 
 module.exports = run;
