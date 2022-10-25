@@ -1,5 +1,6 @@
 import React from "react";
 import { Text, Link } from "basis";
+import { styled } from "stitches";
 
 function Home() {
   return (
@@ -14,8 +15,11 @@ function Home() {
         </Link>
       </Text>
       <div style={{ marginTop: 16 }}>Hope you like it :)</div>
+      <Button onClick={() => test}>Test</Button>
     </React.Fragment>
   );
 }
+
+const Button = styled("button", {});
 
 export default Home;

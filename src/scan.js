@@ -10,7 +10,8 @@ const parseOptions = {
 
 function getComponentNameFromAST(nameObj) {
   switch (nameObj.type) {
-    case "JSXIdentifier": {
+    case "JSXIdentifier":
+    case "Identifier": {
       return nameObj.name;
     }
 
@@ -72,6 +73,7 @@ function getInstanceInfo({
     if (attribute.type === "JSXAttribute") {
       const { name, value } = attribute;
       const propName = name.name;
+
       const propValue = customGetPropValue
         ? customGetPropValue({
             node: value,
@@ -99,6 +101,7 @@ function scan({
   getComponentName = ({ imported, local }) =>
     imported === "default" ? local : imported || local,
   report,
+  styled,
   getPropValue,
 }) {
   let ast;
@@ -111,6 +114,22 @@ function scan({
   }
 
   const importsMap = {};
+
+  const getComponentNamePath = (name) => {
+    const nameParts = name.split(".");
+    const [firstPart, ...restParts] = nameParts;
+    const actualFirstPart = importsMap[firstPart]
+      ? getComponentName({
+          ...importsMap[firstPart],
+        })
+      : firstPart;
+
+    const componentParts = [actualFirstPart, ...restParts];
+    const componentPath = componentParts.join(".components.");
+    const componentName = componentParts.join(".");
+
+    return { componentParts, componentPath, componentName };
+  };
 
   astray.walk(ast, {
     ImportDeclaration(node) {
@@ -146,13 +165,41 @@ function scan({
         }
       }
     },
+    VariableDeclarator: {
+      exit(node) {
+        if (node.init?.type === "CallExpression") {
+          if (
+            node.init?.callee.type === "Identifier" &&
+            node.init?.callee.name === "styled"
+          ) {
+            const firstArg = node.init.arguments[0];
+            const { componentPath } = getComponentNamePath(node.id.name);
+            let componentInfo = getObjectPath(report, componentPath);
+
+            if (firstArg.type === "Identifier" || firstArg.type === "Literal") {
+              dset(styled, componentPath, firstArg);
+
+              const styledName = firstArg.name || firstArg.value;
+              const { componentName: componentSName } =
+                getComponentNamePath(styledName);
+
+              if (componentInfo && !componentInfo.styledFrom) {
+                componentInfo.styledFrom = componentSName;
+              }
+            }
+          }
+        }
+      },
+    },
     JSXOpeningElement: {
       exit(node) {
         const name = getComponentNameFromAST(node.name);
         const nameParts = name.split(".");
         const [firstPart, ...restParts] = nameParts;
         const actualFirstPart = importsMap[firstPart]
-          ? getComponentName(importsMap[firstPart])
+          ? getComponentName({
+              ...importsMap[firstPart],
+            })
           : firstPart;
         const shouldReportComponent = () => {
           if (components) {
@@ -204,7 +251,6 @@ function scan({
         }
 
         const componentParts = [actualFirstPart, ...restParts];
-
         const componentPath = componentParts.join(".components.");
         const componentName = componentParts.join(".");
         let componentInfo = getObjectPath(report, componentPath);
@@ -216,6 +262,14 @@ function scan({
 
         if (!componentInfo.instances) {
           componentInfo.instances = [];
+        }
+
+        let styledPath = getObjectPath(styled, componentPath);
+        if (styledPath && !componentInfo.styledFrom) {
+          const styledName = styledPath.name || styledPath.value;
+          const { componentName: componentSName } =
+            getComponentNamePath(styledName);
+          componentInfo.styledFrom = componentSName;
         }
 
         const info = getInstanceInfo({

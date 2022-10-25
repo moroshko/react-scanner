@@ -52,6 +52,12 @@ Index("no processors", async () => {
             theme: 1,
           },
         },
+        Button: {
+          instances: 1,
+          props: {
+            onClick: 1,
+          },
+        },
         Home: {
           instances: 1,
           props: {},
@@ -97,6 +103,7 @@ Index("single processor", async () => {
         Text: 2,
         App: 1,
         BasisProvider: 1,
+        Button: 1,
         Home: 1,
         Link: 1,
         div: 1,

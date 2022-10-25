@@ -35,6 +35,8 @@ async function run({
   }
 
   let report = {};
+  let styled = {};
+
   const {
     components,
     includeSubComponents,
@@ -55,6 +57,7 @@ async function run({
       importedFrom,
       getComponentName,
       report,
+      styled,
       getPropValue,
     });
   }

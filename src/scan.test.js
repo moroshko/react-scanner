@@ -18,6 +18,7 @@ Scan.before((context) => {
     } = {}
   ) => {
     const report = {};
+    const styled = {};
 
     scan({
       code,
@@ -27,6 +28,8 @@ Scan.before((context) => {
         Header: true,
         Text: true,
         Input: true,
+        Button: true,
+        StyledButton: true,
       },
       ...(components !== undefined && { components }),
       ...(includeSubComponents !== undefined && { includeSubComponents }),
@@ -34,6 +37,7 @@ Scan.before((context) => {
       ...(getComponentName !== undefined && { getComponentName }),
       ...(getPropValue !== undefined && { getPropValue }),
       report,
+      styled,
     });
 
     return report;
@@ -65,7 +69,7 @@ Scan("unknown components", ({ getReport }) => {
     "unknown-components.js",
     `
     <div>
-      <Button>Submit</Button>
+      <CTAButton>Submit</CTAButton>
       <Footer />
     </div>
   `
@@ -1118,6 +1122,129 @@ Scan("importAlias", ({ getReport }) => {
           },
         },
       ],
+    },
+  });
+});
+
+Scan("add styledFrom attribute for Styled Components", ({ getReport }) => {
+  const report = getReport(
+    "add-styled-from-attribute.js",
+    `
+    const styled = (element: El, {children, ...argOpts}) => <El {...argOpts}>{children}</El>;
+
+    const Button = styled('button', {});
+
+    <>
+      <Button>Click me!</Button>
+    </>
+  `
+  );
+
+  assert.equal(report, {
+    Button: {
+      instances: [
+        {
+          props: {},
+          propsSpread: false,
+          location: {
+            file: "add-styled-from-attribute.js",
+            start: {
+              line: 7,
+              column: 7,
+            },
+          },
+        },
+      ],
+      styledFrom: "button",
+    },
+  });
+});
+
+Scan("styled component with custom getComponentName", ({ getReport }) => {
+  const report = getReport(
+    "styled-custom-get-component-name.js",
+    `
+    import MyBox from "@my/design-system/Box";
+    import { ImportedText as LocalText } from "@my/design-system/Text";
+    import StyledButton from "@my/design-system/StyledButton";
+
+
+    const styled = (element: El, {children, ...argOpts}) => <El {...argOpts}>{children}</El>;
+
+    const Button = styled(StyledButton, {});
+
+    <>
+      <MyBox />
+      <LocalText />
+      <Button />
+    </>
+  `,
+    {
+      getComponentName: ({ moduleName }) => {
+        const parts = moduleName.split("/");
+
+        return parts[parts.length - 1];
+      },
+    }
+  );
+
+  assert.equal(report, {
+    Box: {
+      instances: [
+        {
+          importInfo: {
+            local: "MyBox",
+            moduleName: "@my/design-system/Box",
+            importType: "ImportDefaultSpecifier",
+          },
+          props: {},
+          propsSpread: false,
+          location: {
+            file: "styled-custom-get-component-name.js",
+            start: {
+              line: 12,
+              column: 7,
+            },
+          },
+        },
+      ],
+    },
+    Text: {
+      instances: [
+        {
+          importInfo: {
+            imported: "ImportedText",
+            local: "LocalText",
+            moduleName: "@my/design-system/Text",
+            importType: "ImportSpecifier",
+          },
+          props: {},
+          propsSpread: false,
+          location: {
+            file: "styled-custom-get-component-name.js",
+            start: {
+              line: 13,
+              column: 7,
+            },
+          },
+        },
+      ],
+    },
+    Button: {
+      instances: [
+        {
+          props: {},
+          propsSpread: false,
+          location: {
+            file: "styled-custom-get-component-name.js",
+            start: {
+              line: 14,
+              column: 7,
+            },
+          },
+        },
+      ],
+      styledFrom: "StyledButton",
     },
   });
 });
