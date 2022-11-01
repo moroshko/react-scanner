@@ -1,4 +1,5 @@
 node_modules
 coverage
 test/reports
+dist
 .DS_Store

@@ -1,7 +1,7 @@
-const path = require("path");
-const sade = require("sade");
-const { run } = require("./scanner");
-const packageJson = require("../package.json");
+import path from "path";
+import sade from "sade";
+import { run } from "./scanner";
+import packageJson from "../package.json";
 
 sade("react-scanner", true)
   .version(packageJson.version)
@@ -11,6 +11,7 @@ sade("react-scanner", true)
   .action((options) => {
     const configPath = path.resolve(process.cwd(), options.config);
     const configDir = path.dirname(configPath);
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const config = require(configPath);
     run(config, configDir, "cli");
   })

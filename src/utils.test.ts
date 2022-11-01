@@ -1,16 +1,23 @@
-const fs = require("fs");
-const path = require("path");
-const { suite } = require("uvu");
-const assert = require("uvu/assert");
-const {
+import fs from "fs";
+import path from "path";
+import { Context, suite } from "uvu";
+import assert from "uvu/assert";
+import type { Report } from "./types";
+import {
   validateConfig,
   pluralize,
   forEachComponent,
   sortObjectKeysByValue,
   getExcludeFn,
-} = require("./utils");
+} from "./utils";
 
-const ValidateConfig = suite("validateConfig");
+interface ValidateConfigContext extends Context {
+  originalPathResolve: typeof path.resolve;
+  originFsExistsSync: typeof fs.existsSync;
+  mock: ((fn: () => void) => void) | undefined;
+}
+
+const ValidateConfig = suite<ValidateConfigContext>("validateConfig");
 const Pluralize = suite("pluralize");
 const ForEachComponent = suite("forEachComponent");
 const SortObjectKeysByValue = suite("sortObjectKeysByValue");
@@ -35,7 +42,7 @@ ValidateConfig.after.each((context) => {
 });
 
 ValidateConfig("crawlFrom is missing", (context) => {
-  context.mock(() => {
+  context.mock?.(() => {
     path.resolve = () => "";
     fs.existsSync = () => false;
   });
@@ -48,13 +55,14 @@ ValidateConfig("crawlFrom is missing", (context) => {
 });
 
 ValidateConfig("crawlFrom should be a string", (context) => {
-  context.mock(() => {
+  context.mock?.(() => {
     path.resolve = () => "";
     fs.existsSync = () => false;
   });
 
   const result = validateConfig(
     {
+      // @ts-expect-error expected runtime error
       crawlFrom: true,
     },
     "/Users/misha/oscar"
@@ -66,7 +74,7 @@ ValidateConfig("crawlFrom should be a string", (context) => {
 });
 
 ValidateConfig("crawlFrom path doesn't exist", (context) => {
-  context.mock(() => {
+  context.mock?.(() => {
     fs.existsSync = () => false;
   });
 
@@ -86,6 +94,7 @@ ValidateConfig("exclude is an array with invalid items", () => {
   const result = validateConfig(
     {
       crawlFrom: "./src",
+      // @ts-expect-error expected runtime error
       exclude: ["utils", /node_modules/, undefined],
     },
     "/Users/misha/oscar"
@@ -103,6 +112,7 @@ ValidateConfig("exclude is neither an array nor a function", () => {
   const result = validateConfig(
     {
       crawlFrom: "./src",
+      // @ts-expect-error expected runtime error
       exclude: "utils",
     },
     "/Users/misha/oscar"
@@ -118,6 +128,7 @@ ValidateConfig("globs is not an array", () => {
   const result = validateConfig(
     {
       crawlFrom: "./src",
+      // @ts-expect-error expected runtime error
       globs: "**/*.js",
     },
     "/Users/misha/oscar"
@@ -133,6 +144,7 @@ ValidateConfig("globs has a non string item", () => {
   const result = validateConfig(
     {
       crawlFrom: "./src",
+      // @ts-expect-error expected runtime error
       globs: ["**/*.js", 4],
     },
     "/Users/misha/oscar"
@@ -148,6 +160,7 @@ ValidateConfig("components is not an object", () => {
   const result = validateConfig(
     {
       crawlFrom: "./src",
+      // @ts-expect-error expected runtime error
       components: "Header",
     },
     "/Users/misha/oscar"
@@ -164,6 +177,7 @@ ValidateConfig("components has a non true value", () => {
     {
       crawlFrom: "./src",
       components: {
+        // @ts-expect-error expected runtime error
         Header: false,
       },
     },
@@ -180,6 +194,7 @@ ValidateConfig("includeSubComponents is not a boolean", () => {
   const result = validateConfig(
     {
       crawlFrom: "./src",
+      // @ts-expect-error expected runtime error
       includeSubComponents: "yes",
     },
     "/Users/misha/oscar"
@@ -195,6 +210,7 @@ ValidateConfig("importedFrom is not a string or a RegExp", () => {
   const result = validateConfig(
     {
       crawlFrom: "./src",
+      // @ts-expect-error expected runtime error
       importedFrom: ["basis"],
     },
     "/Users/misha/oscar"
@@ -210,6 +226,7 @@ ValidateConfig("processors is not an array", () => {
   const result = validateConfig(
     {
       crawlFrom: "./src",
+      // @ts-expect-error expected runtime error
       processors: "count-components",
     },
     "/Users/misha/oscar"
@@ -225,6 +242,7 @@ ValidateConfig("string form - unknown processor", () => {
   const result = validateConfig(
     {
       crawlFrom: "./src",
+      // @ts-expect-error expected runtime error
       processors: ["foo"],
     },
     "/Users/misha/oscar"
@@ -232,13 +250,14 @@ ValidateConfig("string form - unknown processor", () => {
 
   assert.is(result.crawlFrom, "/Users/misha/oscar/src");
   assert.is(result.errors.length, 1);
-  assert.ok(/^unknown processor: foo/.test(result.errors[0]));
+  assert.ok(/^unknown processor: foo/.test(result.errors[0] ?? ""));
 });
 
 ValidateConfig("array form - not a tuple", () => {
   const result = validateConfig(
     {
       crawlFrom: "./src",
+      // @ts-expect-error expected runtime error
       processors: [["count-components"]],
     },
     "/Users/misha/oscar"
@@ -256,7 +275,8 @@ ValidateConfig("array form - processor name is not a string", () => {
   const result = validateConfig(
     {
       crawlFrom: "./src",
-      processors: [[() => {}, "count-components"]],
+      // @ts-expect-error expected runtime error
+      processors: [[() => ({}), "count-components"]],
     },
     "/Users/misha/oscar"
   );
@@ -273,6 +293,7 @@ ValidateConfig("array form - unknown processor", () => {
   const result = validateConfig(
     {
       crawlFrom: "./src",
+      // @ts-expect-error expected runtime error
       processors: [["foo", {}]],
     },
     "/Users/misha/oscar"
@@ -280,14 +301,15 @@ ValidateConfig("array form - unknown processor", () => {
 
   assert.is(result.crawlFrom, "/Users/misha/oscar/src");
   assert.is(result.errors.length, 1);
-  assert.ok(/^unknown processor: foo/.test(result.errors[0]));
+  assert.ok(/^unknown processor: foo/.test(result.errors[0] ?? ""));
 });
 
 ValidateConfig("array form - processor options is not an object", () => {
   const result = validateConfig(
     {
       crawlFrom: "./src",
-      processors: [["count-components", () => {}]],
+      // @ts-expect-error expected runtime error
+      processors: [["count-components", () => ({})]],
     },
     "/Users/misha/oscar"
   );
@@ -304,7 +326,8 @@ ValidateConfig("array form - processor name is unsupported type", () => {
   const result = validateConfig(
     {
       crawlFrom: "./src",
-      processors: [true, () => {}],
+      // @ts-expect-error expected runtime error
+      processors: [true, () => ({})],
     },
     "/Users/misha/oscar"
   );
@@ -350,7 +373,7 @@ Pluralize("count > 1", () => {
 });
 
 ForEachComponent("visits every component", () => {
-  const report = {
+  const report: Report = {
     Header: {
       id: 1,
       components: {
@@ -377,7 +400,7 @@ ForEachComponent("visits every component", () => {
     },
   };
 
-  const visits = [];
+  const visits: { id: number | undefined; name: string }[] = [];
 
   forEachComponent(report)(({ componentName, component }) => {
     visits.push({

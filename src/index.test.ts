@@ -1,18 +1,18 @@
-const fs = require("fs");
-const path = require("path");
-const execa = require("execa");
-const { suite } = require("uvu");
-const assert = require("uvu/assert");
+import fs from "fs";
+import path from "path";
+import execa from "execa";
+import { suite } from "uvu";
+import assert from "uvu/assert";
 
 const Index = suite("index");
 
-function parseStdout(stdout) {
+function parseStdout(stdout: string) {
   const firstLineBreakIndex = stdout.indexOf("\n");
 
   if (firstLineBreakIndex === -1) {
     return {
       firstLine: stdout,
-      restOutput: null,
+      restOutput: "",
     };
   }
 

@@ -1,7 +1,13 @@
+import type { ProcessorFunctionArgs, ProcessorOptions } from "../types";
+
 const countComponentsProcessor =
-  (options) =>
-  ({ forEachComponent, sortObjectKeysByValue, output }) => {
-    let result = {};
+  (options: ProcessorOptions | undefined) =>
+  ({
+    forEachComponent,
+    sortObjectKeysByValue,
+    output,
+  }: ProcessorFunctionArgs) => {
+    let result: Record<string, number> = {};
 
     forEachComponent(({ componentName, component }) => {
       const { instances } = component;
@@ -18,4 +24,4 @@ const countComponentsProcessor =
     return result;
   };
 
-module.exports = countComponentsProcessor;
+export default countComponentsProcessor;

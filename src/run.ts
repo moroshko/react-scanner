@@ -1,25 +1,35 @@
-const fs = require("fs");
-const path = require("path");
-const { fdir } = require("fdir");
-const { isPlainObject } = require("is-plain-object");
-const scan = require("./scan");
-const {
+import fs from "fs";
+import path from "path";
+import { fdir } from "fdir";
+import { isPlainObject } from "is-plain-object";
+import scan from "./scan";
+import {
   pluralize,
   forEachComponent,
   sortObjectKeysByValue,
   getExcludeFn,
-} = require("./utils");
+} from "./utils";
+import type { Config, ProcessorFunction, ProcessorName, Report } from "./types";
 
 const DEFAULT_GLOBS = ["**/!(*.test|*.spec).@(js|ts)?(x)"];
-const DEFAULT_PROCESSORS = ["count-components-and-props"];
+const DEFAULT_PROCESSORS: ProcessorName[] = ["count-components-and-props"];
+
+export type RunMethod = "cli" | "programmatic";
+type RunArgs = {
+  config: Config;
+  configDir: string | undefined;
+  crawlFrom: string;
+  startTime: bigint;
+  method: RunMethod;
+};
 
 async function run({
   config,
-  configDir,
+  configDir = "",
   crawlFrom,
   startTime,
   method = "cli",
-}) {
+}: RunArgs) {
   const rootDir = config.rootDir || configDir;
   const globs = config.globs || DEFAULT_GLOBS;
   const files = new fdir()
@@ -29,12 +39,17 @@ async function run({
     .crawl(crawlFrom)
     .sync();
 
+  if (!Array.isArray(files)) {
+    console.error(`Something went wrong.`);
+    process.exit(1);
+  }
+
   if (files.length === 0) {
     console.error(`No files found to scan.`);
     process.exit(1);
   }
 
-  let report = {};
+  const report: Report = {};
   const {
     components,
     includeSubComponents,
@@ -45,6 +60,7 @@ async function run({
 
   for (let i = 0, len = files.length; i < len; i++) {
     const filePath = files[i];
+    if (typeof filePath !== "string") continue;
     const code = fs.readFileSync(filePath, "utf8");
 
     scan({
@@ -72,8 +88,8 @@ async function run({
     config.processors && config.processors.length > 0
       ? config.processors
       : DEFAULT_PROCESSORS;
-  const prevResults = [];
-  const output = (data, destination) => {
+  const prevResults: unknown[] = [];
+  const output = (data: unknown, destination?: string) => {
     const defaultDestination = method === "cli" ? "stdout" : "return";
     const dest = destination || defaultDestination;
     const dataStr = isPlainObject(data)
@@ -90,7 +106,7 @@ async function run({
         break;
       }
       default: {
-        const filePath = path.resolve(rootDir, destination);
+        const filePath = path.resolve(rootDir, dest);
 
         fs.mkdirSync(path.dirname(filePath), { recursive: true });
         fs.writeFileSync(filePath, dataStr);
@@ -99,29 +115,33 @@ async function run({
   };
 
   for (const processor of processors) {
-    let processorFn;
+    let processorFn: ProcessorFunction | undefined = undefined;
 
     if (typeof processor === "string") {
-      processorFn = require(`./processors/${processor}`)();
+      processorFn = (await import(`./processors/${processor}`)).default();
     } else if (Array.isArray(processor)) {
-      processorFn = require(`./processors/${processor[0]}`)(processor[1]);
+      processorFn = (await import(`./processors/${processor[0]}`)).default(
+        processor[1]
+      );
     } else if (typeof processor === "function") {
       processorFn = processor;
     }
 
-    const result = await processorFn({
-      report,
-      prevResults,
-      prevResult: prevResults[prevResults.length - 1],
-      forEachComponent: forEachComponent(report),
-      sortObjectKeysByValue,
-      output,
-    });
+    if (processorFn) {
+      const result: unknown = await processorFn({
+        report,
+        prevResults,
+        prevResult: prevResults[prevResults.length - 1],
+        forEachComponent: forEachComponent(report),
+        sortObjectKeysByValue: sortObjectKeysByValue,
+        output,
+      });
 
-    prevResults.push(result);
+      prevResults.push(result);
+    }
   }
 
   return prevResults[prevResults.length - 1];
 }
 
-module.exports = run;
+export default run;

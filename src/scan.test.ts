@@ -1,21 +1,28 @@
-const { suite } = require("uvu");
-const escodegen = require("escodegen-wallaby");
-const assert = require("uvu/assert");
-const scan = require("./scan");
+import { Context, suite } from "uvu";
+import escodegen from "escodegen-wallaby";
+import assert from "uvu/assert";
+import scan from "./scan";
+import type { Config } from "./types";
 
-const Scan = suite("scan");
+interface ScanContext extends Context {
+  getReport:
+    | ((filePath: string, code: string, config?: Config | undefined) => unknown)
+    | undefined;
+}
+
+const Scan = suite<ScanContext>("scan");
 
 Scan.before((context) => {
   context.getReport = (
-    filePath,
-    code,
+    filePath: string,
+    code: string,
     {
       components,
       includeSubComponents,
       importedFrom,
       getComponentName,
       getPropValue,
-    } = {}
+    }: Config = {}
   ) => {
     const report = {};
 
@@ -46,13 +53,13 @@ Scan.after((context) => {
 
 Scan("invalid code", ({ getReport }) => {
   const originalConsoleError = global.console.error;
-  let errors = [];
+  let errors: string[] = [];
 
   global.console.error = (...args) => {
     errors = errors.concat(args);
   };
 
-  const report = getReport("invalid-code.js", `<foo`);
+  const report = getReport?.("invalid-code.js", `<foo`);
 
   assert.equal(errors, ["Failed to parse: invalid-code.js"]);
   assert.equal(report, {});
@@ -61,7 +68,7 @@ Scan("invalid code", ({ getReport }) => {
 });
 
 Scan("unknown components", ({ getReport }) => {
-  const report = getReport(
+  const report = getReport?.(
     "unknown-components.js",
     `
     <div>
@@ -75,13 +82,16 @@ Scan("unknown components", ({ getReport }) => {
 });
 
 Scan("ignores comments", ({ getReport }) => {
-  const report = getReport("ignores-comments.js", `{/* <Text>Hello</Text> */}`);
+  const report = getReport?.(
+    "ignores-comments.js",
+    `{/* <Text>Hello</Text> */}`
+  );
 
   assert.equal(report, {});
 });
 
 Scan("self closing", ({ getReport }) => {
-  const report = getReport("self-closing.js", `<Header />`);
+  const report = getReport?.("self-closing.js", `<Header />`);
 
   assert.equal(report, {
     Header: {
@@ -103,7 +113,7 @@ Scan("self closing", ({ getReport }) => {
 });
 
 Scan("no props", ({ getReport }) => {
-  const report = getReport("no-props.js", `<Text>Hello</Text>`);
+  const report = getReport?.("no-props.js", `<Text>Hello</Text>`);
 
   assert.equal(report, {
     Text: {
@@ -125,7 +135,7 @@ Scan("no props", ({ getReport }) => {
 });
 
 Scan("prop with no value", ({ getReport }) => {
-  const report = getReport(
+  const report = getReport?.(
     "prop-with-no-value.js",
     `<Text foo bar={true}>Hello</Text>`
   );
@@ -153,7 +163,7 @@ Scan("prop with no value", ({ getReport }) => {
 });
 
 Scan("props with literal values", ({ getReport }) => {
-  const report = getReport(
+  const report = getReport?.(
     "props-with-literal-values.js",
     `<Text textStyle="heading2" wrap={false} columns={3}>Hello</Text>`
   );
@@ -182,7 +192,7 @@ Scan("props with literal values", ({ getReport }) => {
 });
 
 Scan("props with other values", ({ getReport }) => {
-  const report = getReport(
+  const report = getReport?.(
     "props-with-other-values.js",
     `<Text foo={bar} style={{object}}>Hello</Text>`
   );
@@ -210,7 +220,7 @@ Scan("props with other values", ({ getReport }) => {
 });
 
 Scan("props with custom value formatter", ({ getReport }) => {
-  const report = getReport(
+  const report = getReport?.(
     "props-with-custom-value-formatter.js",
     `<>
         <Input style={{ fontSize: '10px' }} onClick={e => e.preventDefault()}/>
@@ -223,7 +233,7 @@ Scan("props with custom value formatter", ({ getReport }) => {
         componentName,
         defaultGetPropValue,
       }) => {
-        if (componentName === "Input" && propName === "style") {
+        if (node && componentName === "Input" && propName === "style") {
           if (node.type === "JSXExpressionContainer") {
             return escodegen.generate(node.expression);
           } else {
@@ -273,7 +283,7 @@ Scan("props with custom value formatter", ({ getReport }) => {
 });
 
 Scan("with props spread", ({ getReport }) => {
-  const report = getReport(
+  const report = getReport?.(
     "with-props-spread.js",
     `<Text {...someProps}>Hello</Text>`
   );
@@ -298,7 +308,7 @@ Scan("with props spread", ({ getReport }) => {
 });
 
 Scan("no sub components by default", ({ getReport }) => {
-  const report = getReport(
+  const report = getReport?.(
     "no-sub-components-by-default.js",
     `
     <Header>
@@ -327,7 +337,7 @@ Scan("no sub components by default", ({ getReport }) => {
 });
 
 Scan("with sub components", ({ getReport }) => {
-  const report = getReport(
+  const report = getReport?.(
     "with-sub-components.js",
     `
     <>
@@ -402,7 +412,7 @@ Scan("with sub components", ({ getReport }) => {
 });
 
 Scan("deeply nested sub components", ({ getReport }) => {
-  const report = getReport(
+  const report = getReport?.(
     "deeply-nested-sub-components.js",
     `
     <Header>
@@ -512,7 +522,7 @@ Scan("deeply nested sub components", ({ getReport }) => {
 });
 
 Scan("ignores non-JSX stuff", ({ getReport }) => {
-  const report = getReport(
+  const report = getReport?.(
     "ignores-non-jsx-stuff.js",
     `
     import React from "react";
@@ -582,7 +592,7 @@ Scan("ignores non-JSX stuff", ({ getReport }) => {
 });
 
 Scan("typescript", ({ getReport }) => {
-  const report = getReport(
+  const report = getReport?.(
     "typescript.ts",
     `
     /* @jsx jsx */
@@ -681,7 +691,7 @@ Scan("typescript", ({ getReport }) => {
 });
 
 Scan("not importedFrom", ({ getReport }) => {
-  const report = getReport(
+  const report = getReport?.(
     "not-imported-from.js",
     `
     import Header from "other-design-system";
@@ -695,7 +705,7 @@ Scan("not importedFrom", ({ getReport }) => {
 });
 
 Scan("importedFrom default export", ({ getReport }) => {
-  const report = getReport(
+  const report = getReport?.(
     "imported-from-default-export.js",
     `
     import Header from "my-design-system";
@@ -733,7 +743,7 @@ Scan("importedFrom default export", ({ getReport }) => {
 });
 
 Scan("importedFrom default export as", ({ getReport }) => {
-  const report = getReport(
+  const report = getReport?.(
     "imported-from-default-export.js",
     `
     import { default as Header } from "my-design-system";
@@ -772,7 +782,7 @@ Scan("importedFrom default export as", ({ getReport }) => {
 });
 
 Scan("importedFrom named export", ({ getReport }) => {
-  const report = getReport(
+  const report = getReport?.(
     "imported-from-named-export.js",
     `
     import { Header } from "basis";
@@ -808,7 +818,7 @@ Scan("importedFrom named export", ({ getReport }) => {
 });
 
 Scan("props with jsx expressions", ({ getReport }) => {
-  const report = getReport(
+  const report = getReport?.(
     "imported-from-in-prop-jsx.js",
 
     `
@@ -847,7 +857,7 @@ Scan("props with jsx expressions", ({ getReport }) => {
 });
 
 Scan("importedFrom named export with alias", ({ getReport }) => {
-  const report = getReport(
+  const report = getReport?.(
     "imported-from-named-export-with-alias.js",
     `
     import { Header as MyHeader } from "basis";
@@ -885,7 +895,7 @@ Scan("importedFrom named export with alias", ({ getReport }) => {
 Scan(
   "importedFrom named export with alias - sub component",
   ({ getReport }) => {
-    const report = getReport(
+    const report = getReport?.(
       "imported-from-named-export-with-alias-sub-component.js",
       `
     import { Header as MyHeader } from "basis";
@@ -937,7 +947,7 @@ Scan(
 );
 
 Scan("importedFrom entire module", ({ getReport }) => {
-  const report = getReport(
+  const report = getReport?.(
     "imported-from-entire-module.js",
     `
     import * as Basis from "basis";
@@ -982,7 +992,7 @@ Scan("importedFrom entire module", ({ getReport }) => {
 });
 
 Scan("custom getComponentName", ({ getReport }) => {
-  const report = getReport(
+  const report = getReport?.(
     "custom-get-component-name.js",
     `
     import MyBox from "@my/design-system/Box";
@@ -995,9 +1005,12 @@ Scan("custom getComponentName", ({ getReport }) => {
   `,
     {
       getComponentName: ({ moduleName }) => {
+        if (typeof moduleName !== "string") return "";
         const parts = moduleName.split("/");
 
-        return parts[parts.length - 1];
+        if (parts.length === 0) return "";
+
+        return parts[parts.length - 1] ?? "";
       },
     }
   );
@@ -1048,7 +1061,7 @@ Scan("custom getComponentName", ({ getReport }) => {
 });
 
 Scan("importAlias", ({ getReport }) => {
-  const report = getReport(
+  const report = getReport?.(
     "import-alias.js",
     `
     import Text from "basis";
