@@ -1,14 +1,23 @@
-const fs = require("fs");
-const path = require("path");
-const { isPlainObject } = require("is-plain-object");
-const processors = require("./processors/processors");
+import fs from "fs";
+import path from "path";
+import { isPlainObject } from "is-plain-object";
+import processors from "./processors/processors.json";
+import type { ComponentCallback, Config, Report } from "./types";
 
-function pluralize(count, word) {
+function pluralize(count: number, word: string) {
   return count === 1 ? `1 ${word}` : `${count} ${word}s`;
 }
 
-function validateConfig(config, configDir) {
-  const result = {
+type ValidatorResult = {
+  errors: string[];
+  crawlFrom?: string;
+};
+
+function validateConfig(
+  config: Config,
+  configDir: string | undefined
+): ValidatorResult {
+  const result: ValidatorResult = {
     errors: [],
   };
 
@@ -18,7 +27,7 @@ function validateConfig(config, configDir) {
     result.errors.push(`crawlFrom should be a string`);
   } else {
     const crawlFrom = path.resolve(
-      config.rootDir || configDir,
+      config.rootDir || configDir || "",
       config.crawlFrom
     );
 
@@ -108,10 +117,11 @@ function validateConfig(config, configDir) {
             );
           }
         } else if (Array.isArray(processor)) {
-          if (processor.length !== 2) {
+          const { length } = processor;
+          if (length !== 2) {
             result.errors.push(
               `processor is in a form of array should have exactly 2 items (${pluralize(
-                processor.length,
+                length,
                 "item"
               )} found)`
             );
@@ -152,30 +162,42 @@ function validateConfig(config, configDir) {
   return result;
 }
 
-const forEachComponent = (report) => (callback) => {
+const forEachComponent = (report: Report) => (callback: ComponentCallback) => {
   const queue = [{ namePrefix: "", componentsMap: report }];
 
   while (queue.length > 0) {
-    const { namePrefix, componentsMap } = queue.shift();
+    const item = queue.shift();
 
-    for (let componentName in componentsMap) {
-      const component = componentsMap[componentName];
-      const { components } = component;
-      const fullComponentName = `${namePrefix}${componentName}`;
+    if (item) {
+      const { namePrefix, componentsMap } = item;
 
-      callback({ componentName: fullComponentName, component });
+      for (const componentName in componentsMap) {
+        const component = componentsMap[componentName];
 
-      if (components) {
-        queue.push({
-          namePrefix: `${fullComponentName}.`,
-          componentsMap: components,
-        });
+        if (component) {
+          const { components } = component;
+          const fullComponentName = `${namePrefix}${componentName}`;
+
+          callback({ componentName: fullComponentName, component });
+
+          if (components) {
+            queue.push({
+              namePrefix: `${fullComponentName}.`,
+              componentsMap: components,
+            });
+          }
+        }
       }
     }
   }
 };
 
-function sortObjectKeysByValue(obj, mapValue = (value) => value) {
+//
+
+function sortObjectKeysByValue<Value>(
+  obj: Record<string, Value>,
+  mapValue: (value: Value) => string | number = (value) => String(value)
+): Record<string, Value> {
   const entries = Object.entries(obj);
 
   entries.sort(([key1, value1], [key2, value2]) => {
@@ -188,15 +210,15 @@ function sortObjectKeysByValue(obj, mapValue = (value) => value) {
       : 1;
   });
 
-  return entries.reduce((acc, [key, value]) => {
+  return entries.reduce<Record<string, Value>>((acc, [key, value]) => {
     acc[key] = value;
     return acc;
   }, {});
 }
 
-function getExcludeFn(configExclude) {
+function getExcludeFn(configExclude: Config["exclude"]) {
   if (Array.isArray(configExclude)) {
-    return (dir) => {
+    return (dir: string) => {
       for (let i = 0, len = configExclude.length; i < len; i++) {
         const item = configExclude[i];
 
@@ -219,7 +241,7 @@ function getExcludeFn(configExclude) {
   return () => false;
 }
 
-module.exports = {
+export {
   pluralize,
   validateConfig,
   forEachComponent,

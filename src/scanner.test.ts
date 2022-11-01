@@ -1,8 +1,8 @@
-const path = require("path");
-const { suite } = require("uvu");
-const assert = require("uvu/assert");
+import path from "path";
+import { suite } from "uvu";
+import assert from "uvu/assert";
 
-const scanner = require("./scanner");
+import scanner from "./scanner";
 
 const Scanner = suite("Scanner");
 

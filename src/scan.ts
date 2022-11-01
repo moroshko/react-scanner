@@ -1,14 +1,23 @@
-const { parse } = require("@typescript-eslint/typescript-estree");
-const astray = require("astray");
-const getObjectPath = require("dlv");
-const { dset } = require("dset");
+import { AST, parse } from "@typescript-eslint/typescript-estree";
+import astray from "@mihkeleidast/astray";
+import getObjectPath from "dlv";
+import { dset } from "dset";
+import type { JSXOpeningElement } from "estree-jsx";
+import type {
+  GetComponentNameFunction,
+  ImportInfo,
+  GetPropValueFunction,
+  Report,
+  PropNode,
+  InstanceInfo,
+} from "./types";
 
 const parseOptions = {
   loc: true,
   jsx: true,
 };
 
-function getComponentNameFromAST(nameObj) {
+function getComponentNameFromAST(nameObj: JSXOpeningElement["name"]): string {
   switch (nameObj.type) {
     case "JSXIdentifier": {
       return nameObj.name;
@@ -27,7 +36,7 @@ function getComponentNameFromAST(nameObj) {
   }
 }
 
-function getPropValue(node) {
+function getPropValue(node: PropNode) {
   if (node === null) {
     return null;
   }
@@ -48,28 +57,36 @@ function getPropValue(node) {
   throw new Error(`Unknown node type: ${node.type}`);
 }
 
+type GetInstanceInfoArgs = {
+  node: JSXOpeningElement;
+  filePath: string;
+  importInfo: ImportInfo | undefined;
+  getPropValue: GetPropValueFunction | undefined;
+  componentName: string;
+};
+
 function getInstanceInfo({
   node,
   filePath,
   importInfo,
   getPropValue: customGetPropValue,
   componentName,
-}) {
+}: GetInstanceInfoArgs): InstanceInfo {
   const { attributes } = node;
-  const result = {
+  const result: InstanceInfo = {
     ...(importInfo !== undefined && { importInfo }),
     props: {},
     propsSpread: false,
     location: {
       file: filePath,
-      start: node.name.loc.start,
+      start: node.name.loc?.start,
     },
   };
 
   for (let i = 0, len = attributes.length; i < len; i++) {
     const attribute = attributes[i];
 
-    if (attribute.type === "JSXAttribute") {
+    if (attribute && attribute.type === "JSXAttribute") {
       const { name, value } = attribute;
       const propName = name.name;
       const propValue = customGetPropValue
@@ -81,14 +98,25 @@ function getInstanceInfo({
           })
         : getPropValue(value);
 
-      result.props[propName] = propValue;
-    } else if (attribute.type === "JSXSpreadAttribute") {
+      result.props[propName.toString()] = propValue;
+    } else if (attribute && attribute.type === "JSXSpreadAttribute") {
       result.propsSpread = true;
     }
   }
 
   return result;
 }
+
+type ScanArgs = {
+  code: string;
+  filePath: string;
+  components: Record<string, true> | undefined;
+  includeSubComponents?: boolean | undefined;
+  importedFrom?: string | RegExp | undefined;
+  getComponentName?: GetComponentNameFunction | undefined;
+  getPropValue?: GetPropValueFunction | undefined;
+  report: Report;
+};
 
 function scan({
   code,
@@ -100,8 +128,8 @@ function scan({
     imported === "default" ? local : imported || local,
   report,
   getPropValue,
-}) {
-  let ast;
+}: ScanArgs) {
+  let ast: AST<Record<string, unknown>>;
 
   try {
     ast = parse(code, parseOptions);
@@ -110,7 +138,7 @@ function scan({
     return;
   }
 
-  const importsMap = {};
+  const importsMap: Record<string, ImportInfo> = {};
 
   astray.walk(ast, {
     ImportDeclaration(node) {
@@ -119,29 +147,29 @@ function scan({
       const specifiersCount = specifiers.length;
 
       for (let i = 0; i < specifiersCount; i++) {
-        switch (specifiers[i].type) {
-          case "ImportDefaultSpecifier":
-          case "ImportSpecifier":
-          case "ImportNamespaceSpecifier": {
-            const imported = specifiers[i].imported
-              ? specifiers[i].imported.name
-              : null;
-            const local = specifiers[i].local.name;
+        const spec = specifiers[i];
+        if (spec) {
+          switch (spec.type) {
+            case "ImportDefaultSpecifier":
+            case "ImportSpecifier":
+            case "ImportNamespaceSpecifier": {
+              const imported = "imported" in spec ? spec.imported.name : null;
+              const local = spec.local.name;
 
-            importsMap[local] = {
-              ...(imported !== null && { imported }),
-              local,
-              moduleName,
-              importType: specifiers[i].type,
-            };
-            break;
-          }
+              importsMap[local] = {
+                ...(imported !== null && { imported }),
+                local,
+                moduleName,
+                importType: spec.type,
+              };
+              break;
+            }
 
-          /* c8 ignore next 5 */
-          default: {
-            throw new Error(
-              `Unknown import specifier type: ${specifiers[i].type}`
-            );
+            /* c8 ignore next 5 */
+            default: {
+              // @ts-expect-error expected runtime error
+              throw new Error(`Unknown import specifier type: ${spec.type}`);
+            }
           }
         }
       }
@@ -151,8 +179,12 @@ function scan({
         const name = getComponentNameFromAST(node.name);
         const nameParts = name.split(".");
         const [firstPart, ...restParts] = nameParts;
-        const actualFirstPart = importsMap[firstPart]
-          ? getComponentName(importsMap[firstPart])
+        if (!firstPart) return;
+
+        const importsItem = importsMap[firstPart];
+
+        const actualFirstPart = importsItem
+          ? getComponentName(importsItem)
           : firstPart;
         const shouldReportComponent = () => {
           if (components) {
@@ -181,13 +213,16 @@ function scan({
           }
 
           if (importedFrom) {
-            if (!importsMap[firstPart]) {
+            if (!importsItem) {
               return false;
             }
 
-            const actualImportedFrom = importsMap[firstPart].moduleName;
+            const actualImportedFrom = importsItem.moduleName;
 
-            if (importedFrom instanceof RegExp) {
+            if (
+              importedFrom instanceof RegExp &&
+              typeof actualImportedFrom === "string"
+            ) {
               if (importedFrom.test(actualImportedFrom) === false) {
                 return false;
               }
@@ -227,9 +262,11 @@ function scan({
         });
 
         componentInfo.instances.push(info);
+
+        return;
       },
     },
   });
 }
 
-module.exports = scan;
+export default scan;
