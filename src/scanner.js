@@ -4,7 +4,7 @@ const { validateConfig } = require("./utils");
 const runScan = require("./run");
 
 const scanner = {
-  run: async function run(config, configDir, method = "programmatic") {
+  run: async function run(config, configDir, method = "programmatic", silent) {
     const { crawlFrom, errors } = validateConfig(config, configDir);
 
     if (errors.length === 0) {
@@ -14,13 +14,16 @@ const scanner = {
         crawlFrom,
         startTime,
         method: method,
+        silent,
       });
     } else {
-      console.error(`Config errors:`);
+      if (!silent) {
+        console.error(`Config errors:`);
 
-      errors.forEach((error) => {
-        console.error(`- ${error}`);
-      });
+        errors.forEach((error) => {
+          console.error(`- ${error}`);
+        });
+      }
 
       process.exit(1);
     }
