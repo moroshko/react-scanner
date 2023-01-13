@@ -209,4 +209,29 @@ Index("no files found", async () => {
   }
 });
 
+Index("silent - no error", async () => {
+  const { exitCode, stdout } = await execa("./bin/react-scanner", [
+    "-c",
+    "./test/configs/noProcessors.config.js",
+    "--silent",
+  ]);
+  const { firstLine, restOutput } = parseStdout(stdout);
+  assert.is(exitCode, 0);
+  assert.ok(/^$/.test(firstLine));
+  assert.ok(/^$/, restOutput);
+});
+
+Index("silent - error", async () => {
+  try {
+    await execa("./bin/react-scanner", [
+      "-c",
+      "./test/configs/noFilesFound.config.js",
+      "--silent",
+    ]);
+  } catch ({ exitCode, stderr }) {
+    assert.is(exitCode, 1);
+    assert.is(stderr, "");
+  }
+});
+
 Index.run();

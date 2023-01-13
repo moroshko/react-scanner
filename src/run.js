@@ -19,6 +19,7 @@ async function run({
   crawlFrom,
   startTime,
   method = "cli",
+  silent,
 }) {
   const rootDir = config.rootDir || configDir;
   const globs = config.globs || DEFAULT_GLOBS;
@@ -30,7 +31,9 @@ async function run({
     .sync();
 
   if (files.length === 0) {
-    console.error(`No files found to scan.`);
+    if (!silent) {
+      console.error(`No files found to scan.`);
+    }
     process.exit(1);
   }
 
@@ -61,12 +64,14 @@ async function run({
 
   const endTime = process.hrtime.bigint();
 
-  // eslint-disable-next-line no-console
-  console.log(
-    `Scanned ${pluralize(files.length, "file")} in ${
-      Number(endTime - startTime) / 1e9
-    } seconds`
-  );
+  if (!silent) {
+    // eslint-disable-next-line no-console
+    console.log(
+      `Scanned ${pluralize(files.length, "file")} in ${
+        Number(endTime - startTime) / 1e9
+      } seconds`
+    );
+  }
 
   const processors =
     config.processors && config.processors.length > 0
@@ -82,8 +87,10 @@ async function run({
 
     switch (dest) {
       case "stdout": {
-        // eslint-disable-next-line no-console
-        console.log(dataStr);
+        if (!silent) {
+          // eslint-disable-next-line no-console
+          console.log(dataStr);
+        }
         break;
       }
       case "return": {
