@@ -31,7 +31,7 @@ async function run({
 
   if (files.length === 0) {
     console.error(`No files found to scan.`);
-    return;
+    throw new Error(`No files found to scan.`);
   }
 
   let report = {};
