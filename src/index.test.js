@@ -203,9 +203,11 @@ Index("no files found", async () => {
       "-c",
       "./test/configs/noFilesFound.config.js",
     ]);
-  } catch ({ exitCode, stderr }) {
-    assert.is(exitCode, 1);
-    assert.is(stderr, "No files found to scan.");
+
+    assert.unreachable("should have thrown");
+  } catch (err) {
+    assert.instance(err, Error);
+    assert.match(err.message, "No files found to scan");
   }
 });
 
