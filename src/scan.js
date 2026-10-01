@@ -100,6 +100,8 @@ function scan({
     imported === "default" ? local : imported || local,
   report,
   getPropValue,
+  resolveImport,
+  resolveComponent,
 }) {
   let ast;
 
@@ -134,6 +136,28 @@ function scan({
               moduleName,
               importType: specifiers[i].type,
             };
+            if (resolveImport) {
+              const resolved = resolveImport({
+                filePath,
+                node,
+                specifier: specifiers[i],
+                importInfo: importsMap[local],
+              });
+              if (resolved) {
+                const componentPath = resolved.componentName
+                  .split(".")
+                  .join(".components.");
+                let component = getObjectPath(report, componentPath);
+                if (!component) {
+                  component = { instances: [] };
+                  dset(report, componentPath, component);
+                }
+                if (!component.imports) {
+                  component.imports = [];
+                }
+                component.imports.push(resolved.importRecord);
+              }
+            }
             break;
           }
 
@@ -149,11 +173,18 @@ function scan({
     JSXOpeningElement: {
       exit(node) {
         const name = getComponentNameFromAST(node.name);
-        const nameParts = name.split(".");
+        const resolved =
+          resolveComponent && resolveComponent({ filePath, node, name });
+        if (resolveComponent && !resolved) return astray.SKIP;
+        const nameParts = (resolved ? resolved.componentName : name).split(".");
         const [firstPart, ...restParts] = nameParts;
-        const actualFirstPart = importsMap[firstPart]
-          ? getComponentName(importsMap[firstPart])
-          : firstPart;
+        const effectiveImport = resolved
+          ? resolved.importInfo
+          : importsMap[firstPart];
+        const actualFirstPart =
+          !resolved && importsMap[firstPart]
+            ? getComponentName(importsMap[firstPart])
+            : firstPart;
         const shouldReportComponent = () => {
           if (components) {
             if (nameParts.length === 1) {
@@ -181,11 +212,11 @@ function scan({
           }
 
           if (importedFrom) {
-            if (!importsMap[firstPart]) {
+            if (!effectiveImport) {
               return false;
             }
 
-            const actualImportedFrom = importsMap[firstPart].moduleName;
+            const actualImportedFrom = effectiveImport.moduleName;
 
             if (importedFrom instanceof RegExp) {
               if (importedFrom.test(actualImportedFrom) === false) {
@@ -221,7 +252,7 @@ function scan({
         const info = getInstanceInfo({
           node,
           filePath,
-          importInfo: importsMap[firstPart],
+          importInfo: effectiveImport,
           getPropValue,
           componentName,
         });

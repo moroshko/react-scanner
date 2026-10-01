@@ -41,6 +41,8 @@ async function run({
     importedFrom,
     getComponentName,
     getPropValue,
+    resolveImport,
+    resolveComponent,
   } = config;
 
   for (let i = 0, len = files.length; i < len; i++) {
@@ -56,6 +58,8 @@ async function run({
       getComponentName,
       report,
       getPropValue,
+      resolveImport,
+      resolveComponent,
     });
   }
 

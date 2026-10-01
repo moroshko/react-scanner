@@ -94,6 +94,12 @@ function validateConfig(config, configDir) {
     }
   }
 
+  for (const hook of ["resolveImport", "resolveComponent"]) {
+    if (config[hook] !== undefined && typeof config[hook] !== "function") {
+      result.errors.push(`${hook} should be a function`);
+    }
+  }
+
   if (config.processors !== undefined) {
     if (Array.isArray(config.processors)) {
       for (let i = 0, len = config.processors.length; i < len; i++) {

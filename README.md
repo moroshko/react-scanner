@@ -246,7 +246,100 @@ Here are all the available config options:
 | `importedFrom`         | string or regex   | Before reporting a component, we'll check if it's imported from a module name matching `importedFrom` and, only if there is a match, the component will be reported.<br>When omitted, this check is bypassed.                                                                                                                                        |
 | `getComponentName`     | function          | This function is called to determine the component name to be used in the report based on the `import` declaration.<br>Default: `({ imported, local, moduleName, importType }) => imported \|\| local`                                                                                                                                               |
 | `getPropValue`         | function          | Customize reporting for non-trivial prop values. See [Customizing prop values treatment](#customizing-prop-values-treatment)                                                                                                                                                                                                                         |
+| `resolveImport`        | function          | Optionally record imports without JSX. See [External resolution hooks](#external-resolution-hooks).                                                                                                                                                                                                                                                  |
+| `resolveComponent`     | function          | Optionally resolve JSX tags using an external symbol resolver. See [External resolution hooks](#external-resolution-hooks).                                                                                                                                                                                                                          |
 | `processors`           | array             | See [Processors](#processors).<br>Default: `["count-components-and-props"]`                                                                                                                                                                                                                                                                          |
+
+## External resolution hooks
+
+The optional synchronous `resolveImport` and `resolveComponent` callbacks let an
+external resolver supply import records and canonical component identities. For
+example, a caller can reuse a TypeScript program to identify a component through
+reexports or distinguish an imported name from a shadowed local variable. The
+scanner does not create a TypeScript program or resolve modules itself.
+
+Without these callbacks, the existing import and JSX reporting stays unchanged.
+The callbacks are independent: either can be configured on its own.
+
+### resolveImport
+
+Called for every default, named or namespace import specifier, including unused
+and type-only imports:
+
+```js
+resolveImport({ filePath, node, specifier, importInfo });
+```
+
+- `filePath`: the source file path.
+- `node`: the ESTree `ImportDeclaration`.
+- `specifier`: the ESTree import specifier, including its `loc.start`.
+- `importInfo`: the existing import metadata (`imported` when present, `local`,
+  `moduleName`, and `importType`).
+
+Return `{ componentName, importRecord }` to append a record to that component's
+`imports` array in the raw report. `importRecord` is caller-defined data. A falsy
+return value skips the record. Dotted component names use the same nested
+`components` structure as JSX subcomponents.
+
+```js
+resolveImport: ({ filePath, node, specifier, importInfo }) => {
+  if (importInfo.moduleName !== "example-ui") {
+    return null;
+  }
+
+  return {
+    componentName: importInfo.imported || importInfo.local,
+    importRecord: {
+      ...importInfo,
+      typeOnly: node.importKind === "type" || specifier.importKind === "type",
+      location: { file: filePath, start: specifier.loc.start },
+    },
+  };
+},
+```
+
+An import record does not create a rendered instance. An import-only component
+has `instances: []`; built-in count processors report zero instances and count no
+props for it. Import-record selection is controlled by this callback, independently
+of the JSX `components`, `importedFrom` and `includeSubComponents` filters. Source
+lines start at one and columns start at zero, consistent with JSX locations.
+
+### resolveComponent
+
+Called for each JSX opening tag:
+
+```js
+resolveComponent({ filePath, node, name });
+```
+
+- `filePath`: the source file path.
+- `node`: the ESTree `JSXOpeningElement`; `node.name.loc.start` identifies the tag.
+- `name`: the source tag name, such as `Alias` or `Menu.Item`.
+
+Return `{ componentName, importInfo }` with the canonical component name and
+optional import metadata. For example, an external resolver can map an `Alias`
+tag imported through a local barrel to:
+
+```js
+{
+  componentName: "Button",
+  importInfo: {
+    imported: "Button",
+    local: "Alias",
+    moduleName: "example-ui",
+    importType: "ImportSpecifier",
+  },
+}
+```
+
+A falsy result excludes that JSX tag; there is no fallback to the scanner's
+file-local import lookup when the callback is configured. This lets the resolver
+exclude shadowed identifiers. Resolved names bypass `getComponentName` and are
+still subject to `components` and `includeSubComponents`; `importedFrom` uses the
+returned `importInfo.moduleName`. Supply import metadata when using that filter.
+
+The scanner continues to extract props, spread flags and JSX locations. Resolution
+does not evaluate runtime expressions or propagate props through wrappers.
 
 ## Processors
 
